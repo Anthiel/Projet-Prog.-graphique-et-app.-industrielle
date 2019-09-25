@@ -59,9 +59,16 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_generer">
+        <widget class="QPushButton" name="pushButton_H">
          <property name="text">
-          <string>Générer mesh</string>
+          <string>Courbure Moyenne</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_K">
+         <property name="text">
+          <string>Courbure Gaussienne</string>
          </property>
         </widget>
        </item>
@@ -77,6 +84,13 @@
           </size>
          </property>
         </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="pushButton_angleArea">
+         <property name="text">
+          <string>Test angles/aires</string>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
