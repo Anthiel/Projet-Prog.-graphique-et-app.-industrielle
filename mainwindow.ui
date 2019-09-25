@@ -59,16 +59,9 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_H">
+        <widget class="QPushButton" name="pushButton_bary">
          <property name="text">
-          <string>Courbure Moyenne</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="pushButton_K">
-         <property name="text">
-          <string>Courbure Gaussienne</string>
+          <string>Barycentre de la forme</string>
          </property>
         </widget>
        </item>
@@ -106,7 +99,7 @@
      <x>0</x>
      <y>0</y>
      <width>632</width>
-     <height>22</height>
+     <height>20</height>
     </rect>
    </property>
   </widget>

@@ -53,6 +53,9 @@ public:
     float AngleAbs(MyMesh* _mesh, int vertexID);
     float fctK(MyMesh* _mesh, int vertexID);
     float fctH(MyMesh* _mesh, int vertexID);
+    MyMesh::Point barycentreForme(MyMesh* _mesh);
+
+
 
     void displayMesh(MyMesh *_mesh, bool isTemperatureMap = false, float mapRange = -1);
     void resetAllColorsAndThickness(MyMesh* _mesh);
@@ -61,8 +64,7 @@ private slots:
 
     void on_pushButton_chargement_clicked();
     void on_pushButton_angleArea_clicked();
-    void on_pushButton_H_clicked();
-    void on_pushButton_K_clicked();
+    void on_pushButton_bary_clicked();
 
 private:
 

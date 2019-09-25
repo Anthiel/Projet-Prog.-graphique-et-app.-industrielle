@@ -108,6 +108,25 @@ VectorT <float,6> MainWindow::VecteurDirecteursTriangle(MyMesh *_mesh, int verte
     return Vec;
 }
 
+MyMesh::Point MainWindow::barycentreForme(MyMesh* _mesh) {
+
+    MyMesh::Point bary;
+
+    for (MyMesh::VertexIter curVert = _mesh->vertices_begin(); curVert != _mesh->vertices_end(); curVert++)
+    {
+        VertexHandle vh = *curVert;
+        bary += _mesh->point(vh);
+    }
+
+    bary /= _mesh->n_vertices();
+    MyMesh::VertexHandle newhandle = _mesh->add_vertex(bary);
+    _mesh->set_color(newhandle, MyMesh::Color(0,255,0));
+    qDebug() << "Barycentre X:" << bary[0];
+    qDebug() << "Barycentre Y:" << bary[1];
+    qDebug() << "Barycentre Z:" << bary[2];
+    return bary;
+}
+
 
 
 VectorT <float,3> MainWindow::LongueurArc(MyMesh *_mesh, int vertexID, int vertexID2){
@@ -262,16 +281,10 @@ void MainWindow::K_Curv(MyMesh* _mesh)
 
 
 /* **** début de la partie boutons et IHM **** */
-void MainWindow::on_pushButton_H_clicked()
+void MainWindow::on_pushButton_bary_clicked()
 {
-    H_Curv(&mesh);
-    displayMesh(&mesh, true); // true permet de passer en mode "carte de temperatures", avec une gestion automatique de la couleur (voir exemple)
-}
-
-void MainWindow::on_pushButton_K_clicked()
-{
-    K_Curv(&mesh);
-    displayMesh(&mesh, true); // true permet de passer en mode "carte de temperatures", avec une gestion automatique de la couleur (voir exemple)
+    barycentreForme(&mesh);
+    displayMesh(&mesh, true);
 }
 
 /*
