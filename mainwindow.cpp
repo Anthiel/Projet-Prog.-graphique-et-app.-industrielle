@@ -121,6 +121,7 @@ MyMesh::Point MainWindow::barycentreForme(MyMesh* _mesh) {
     bary /= _mesh->n_vertices();
     MyMesh::VertexHandle newhandle = _mesh->add_vertex(bary);
     _mesh->set_color(newhandle, MyMesh::Color(0,255,0));
+    qDebug() << "Nombre de points:" << _mesh->n_vertices();
     qDebug() << "Barycentre X:" << bary[0];
     qDebug() << "Barycentre Y:" << bary[1];
     qDebug() << "Barycentre Z:" << bary[2];
