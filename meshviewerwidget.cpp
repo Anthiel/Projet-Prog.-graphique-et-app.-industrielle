@@ -56,6 +56,73 @@ void MeshViewerWidget::reloadPOV()
     updateGL();
 }
 
+void MeshViewerWidget::drawBoundingBox(float sizex, float sizey, float sizez, float centerx, float centery, float centerz){
+    GLfloat vertices[] = {
+        -0.5, -0.5, -0.5, 1.0,
+         0.5, -0.5, -0.5, 1.0,
+         0.5,  0.5, -0.5, 1.0,
+        -0.5,  0.5, -0.5, 1.0,
+        -0.5, -0.5,  0.5, 1.0,
+         0.5, -0.5,  0.5, 1.0,
+         0.5,  0.5,  0.5, 1.0,
+        -0.5,  0.5,  0.5, 1.0,
+    };
+
+    GLuint vbo_vertices;
+    glGenBuffers(1, &vbo_vertices);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    GLushort elements[] = {
+        0, 1, 2, 3,
+        4, 5, 6, 7,
+        0, 4, 1, 5, 2, 6, 3, 7
+    };
+
+    GLuint ibo_elements;
+    glGenBuffers(1, &ibo_elements);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_elements);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    const QVector3D size = QVector3D(sizex, sizey, sizez);
+    const QVector3D center = QVector3D(centerx, centery, centerz);
+    QMatrix4x4 transform;
+    transform.translate(center);
+    transform.scale(size);
+
+    glLoadIdentity();
+    glTranslatef( center[0], center[1], center[2] );
+    glScalef( size[0], size[1], size[2] );
+    glMultMatrixd( modelview_matrix_ );
+    glGetDoublev( GL_MODELVIEW_MATRIX, modelview_matrix_);
+
+    glMatrixMode( GL_MODELVIEW );
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_vertices);
+    /*glEnableVertexAttribArray(attribute_v_coord);
+    glVertexAttribPointer(
+        attribute_v_coord,  // attribute
+        4,                  // number of elements per vertex, here (x,y,z,w)
+        GL_FLOAT,           // the type of each element
+        GL_FALSE,           // take our values as-is
+        0,                  // no extra data between each position
+        0                   // offset of first element
+    );*/
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_elements);
+    glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, 0);
+    glDrawElements(GL_LINE_LOOP, 4, GL_UNSIGNED_SHORT, (GLvoid*)(4*sizeof(GLushort)));
+    glDrawElements(GL_LINES, 8, GL_UNSIGNED_SHORT, (GLvoid*)(8*sizeof(GLushort)));
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    //glDisableVertexAttribArray(attribute_v_coord);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glDeleteBuffers(1, &vbo_vertices);
+    glDeleteBuffers(1, &ibo_elements);
+}
+
 void MeshViewerWidget::loadMesh(GLfloat* verts, GLfloat* colors, int nVerts, GLuint* triangles, int nTriangles)
 {
     GLfloat* vertsColsArray = new GLfloat[nVerts * 2];

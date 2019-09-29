@@ -54,6 +54,7 @@ public:
     float fctK(MyMesh* _mesh, int vertexID);
     float fctH(MyMesh* _mesh, int vertexID);
     MyMesh::Point barycentreForme(MyMesh* _mesh);
+    QVector<float> boiteEnglobante(MyMesh* _mesh);
 
 
 
@@ -65,6 +66,8 @@ private slots:
     void on_pushButton_chargement_clicked();
     void on_pushButton_angleArea_clicked();
     void on_pushButton_bary_clicked();
+
+    void on_pushButton_bb_clicked();
 
 private:
 

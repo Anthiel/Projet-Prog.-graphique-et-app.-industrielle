@@ -17,6 +17,8 @@
     #include <GL/glx.h>
     #include <GL/glext.h>
     #include <GL/glut.h>
+    #include <QMatrix4x4>
+    #include <QVector3D>
 #endif
 
 
@@ -49,6 +51,7 @@ public:
     void loadMesh(GLfloat* verts, GLfloat* colors, int nVerts, GLuint* triangles, int nTriangles);
     void loadLines(GLfloat* verts, GLfloat* colors, int nVerts, GLuint* lines, int nLines, QList<QPair<float, int> > es);
     void loadPoints(GLfloat* verts, GLfloat* colors, int nVerts, GLuint* points, int nPoints, QList<QPair<float, int> > vs);
+    void drawBoundingBox(float sizex, float sizey, float sizez, float centerx, float centery, float centerz);
 
     // buffer pour les VBO
     GLuint TriDataBuffers[2];

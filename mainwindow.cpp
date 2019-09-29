@@ -2,6 +2,8 @@
 #include "ui_mainwindow.h"
 #include <math.h>
 
+#define myqDebug() qDebug() << fixed << qSetRealNumberPrecision(4)
+
 /* **** début de la partie à compléter **** */
 
 float MainWindow::faceArea(MyMesh* _mesh, int faceID)
@@ -110,22 +112,68 @@ VectorT <float,6> MainWindow::VecteurDirecteursTriangle(MyMesh *_mesh, int verte
 
 MyMesh::Point MainWindow::barycentreForme(MyMesh* _mesh) {
 
-    MyMesh::Point bary;
+    float x = 0.0f;
+    float y = 0.0f;
+    float z = 0.0f;
 
     for (MyMesh::VertexIter curVert = _mesh->vertices_begin(); curVert != _mesh->vertices_end(); curVert++)
     {
         VertexHandle vh = *curVert;
-        bary += _mesh->point(vh);
+        x += _mesh->point(vh)[0];
+        y += _mesh->point(vh)[1];
+        z += _mesh->point(vh)[2];
     }
 
-    bary /= _mesh->n_vertices();
+    x /= _mesh->n_vertices();
+    y /= _mesh->n_vertices();
+    z /= _mesh->n_vertices();
+
+    MyMesh::Point bary(x, y, z);
+
     MyMesh::VertexHandle newhandle = _mesh->add_vertex(bary);
     _mesh->set_color(newhandle, MyMesh::Color(0,255,0));
+    _mesh->data(newhandle).thickness = 2;
     qDebug() << "Nombre de points:" << _mesh->n_vertices();
-    qDebug() << "Barycentre X:" << bary[0];
-    qDebug() << "Barycentre Y:" << bary[1];
-    qDebug() << "Barycentre Z:" << bary[2];
+    myqDebug() << "Barycentre X:" << bary[0];
+    myqDebug() << "Barycentre Y:" << bary[1];
+    myqDebug() << "Barycentre Z:" << bary[2];
     return bary;
+}
+
+QVector<float> MainWindow::boiteEnglobante(MyMesh* _mesh){
+    float minx = _mesh->point(_mesh->vertex_handle(0))[0];
+    float miny = _mesh->point(_mesh->vertex_handle(0))[1];
+    float minz = _mesh->point(_mesh->vertex_handle(0))[2];
+
+    float maxx = _mesh->point(_mesh->vertex_handle(0))[0];
+    float maxy = _mesh->point(_mesh->vertex_handle(0))[1];
+    float maxz = _mesh->point(_mesh->vertex_handle(0))[2];
+
+    for (MyMesh::VertexIter curVert = _mesh->vertices_begin(); curVert != _mesh->vertices_end(); curVert++)
+    {
+        VertexHandle vh = *curVert;
+        if(_mesh->point(vh)[0] < minx) minx = _mesh->point(vh)[0];
+        if(_mesh->point(vh)[0] > maxx) maxx = _mesh->point(vh)[0];
+
+        if(_mesh->point(vh)[1] < miny) miny = _mesh->point(vh)[1];
+        if(_mesh->point(vh)[1] > maxy) maxy = _mesh->point(vh)[1];
+
+        if(_mesh->point(vh)[2] < minz) minz = _mesh->point(vh)[2];
+        if(_mesh->point(vh)[2] > maxz) maxz = _mesh->point(vh)[2];
+    }
+
+    float sizex = maxx - minx;
+    float sizey = maxy - miny;
+    float sizez = maxz - minz;
+
+    float centerx = (maxx + minx) / 2;
+    float centery = (maxy + miny) / 2;
+    float centerz = (maxz + minz) / 2;
+
+    QVector<float> values = {centerx, centery, centerz,
+                            sizex, sizey, sizez};
+
+    return values;
 }
 
 
@@ -330,6 +378,11 @@ void MainWindow::on_pushButton_chargement_clicked()
     // on affiche le maillage
     displayMesh(&mesh);
 }
+
+void MainWindow::on_pushButton_bb_clicked()
+{
+    boiteEnglobante(&mesh);
+}
 /* **** fin de la partie boutons et IHM **** */
 
 /* **** fonctions supplémentaires **** */
@@ -355,24 +408,26 @@ void MainWindow::resetAllColorsAndThickness(MyMesh* _mesh)
 }
 
 // charge un objet MyMesh dans l'environnement OpenGL
-void MainWindow::displayMesh(MyMesh* _mesh, bool isTemperatureMap, float mapRange)
+void MainWindow::displayMesh(MyMesh *_mesh, bool isTemperatureMap, float mapRange)
 {
-    GLuint* triIndiceArray = new GLuint[_mesh->n_faces() * 3];
-    GLfloat* triCols = new GLfloat[_mesh->n_faces() * 3 * 3];
-    GLfloat* triVerts = new GLfloat[_mesh->n_faces() * 3 * 3];
+    QVector<float> bb_values = boiteEnglobante(&mesh);
+
+    GLuint *triIndiceArray = new GLuint[_mesh->n_faces() * 3];
+    GLfloat *triCols = new GLfloat[_mesh->n_faces() * 3 * 3];
+    GLfloat *triVerts = new GLfloat[_mesh->n_faces() * 3 * 3];
 
     int i = 0;
 
-    if(isTemperatureMap)
+    if (isTemperatureMap)
     {
         QVector<float> values;
 
-        if(mapRange == -1)
+        if (mapRange == -1)
         {
             for (MyMesh::VertexIter curVert = _mesh->vertices_begin(); curVert != _mesh->vertices_end(); curVert++)
                 values.append(fabs(_mesh->data(*curVert).value));
             qSort(values);
-            mapRange = values.at(values.size()*0.8);
+            mapRange = values.at(values.size() * 0.8);
             qDebug() << "mapRange" << mapRange;
         }
 
@@ -380,54 +435,129 @@ void MainWindow::displayMesh(MyMesh* _mesh, bool isTemperatureMap, float mapRang
         MyMesh::ConstFaceIter fIt(_mesh->faces_begin()), fEnd(_mesh->faces_end());
         MyMesh::ConstFaceVertexIter fvIt;
 
-        for (; fIt!=fEnd; ++fIt)
+        for (; fIt != fEnd; ++fIt)
         {
             fvIt = _mesh->cfv_iter(*fIt);
-            if(_mesh->data(*fvIt).value > 0){triCols[3*i+0] = 255; triCols[3*i+1] = 255 - std::min((_mesh->data(*fvIt).value/range) * 255.0, 255.0); triCols[3*i+2] = 255 - std::min((_mesh->data(*fvIt).value/range) * 255.0, 255.0);}
-            else{triCols[3*i+2] = 255; triCols[3*i+1] = 255 - std::min((-_mesh->data(*fvIt).value/range) * 255.0, 255.0); triCols[3*i+0] = 255 - std::min((-_mesh->data(*fvIt).value/range) * 255.0, 255.0);}
-            triVerts[3*i+0] = _mesh->point(*fvIt)[0]; triVerts[3*i+1] = _mesh->point(*fvIt)[1]; triVerts[3*i+2] = _mesh->point(*fvIt)[2];
+            if (_mesh->data(*fvIt).value > 0)
+            {
+                triCols[3 * i + 0] = 255;
+                triCols[3 * i + 1] = 255 - std::min((_mesh->data(*fvIt).value / range) * 255.0, 255.0);
+                triCols[3 * i + 2] = 255 - std::min((_mesh->data(*fvIt).value / range) * 255.0, 255.0);
+            }
+            else
+            {
+                triCols[3 * i + 2] = 255;
+                triCols[3 * i + 1] = 255 - std::min((-_mesh->data(*fvIt).value / range) * 255.0, 255.0);
+                triCols[3 * i + 0] = 255 - std::min((-_mesh->data(*fvIt).value / range) * 255.0, 255.0);
+            }
+            triVerts[3 * i + 0] = _mesh->point(*fvIt)[0];
+            triVerts[3 * i + 1] = _mesh->point(*fvIt)[1];
+            triVerts[3 * i + 2] = _mesh->point(*fvIt)[2];
             triIndiceArray[i] = i;
 
-            i++; ++fvIt;
-            if(_mesh->data(*fvIt).value > 0){triCols[3*i+0] = 255; triCols[3*i+1] = 255 - std::min((_mesh->data(*fvIt).value/range) * 255.0, 255.0); triCols[3*i+2] = 255 - std::min((_mesh->data(*fvIt).value/range) * 255.0, 255.0);}
-            else{triCols[3*i+2] = 255; triCols[3*i+1] = 255 - std::min((-_mesh->data(*fvIt).value/range) * 255.0, 255.0); triCols[3*i+0] = 255 - std::min((-_mesh->data(*fvIt).value/range) * 255.0, 255.0);}
-            triVerts[3*i+0] = _mesh->point(*fvIt)[0]; triVerts[3*i+1] = _mesh->point(*fvIt)[1]; triVerts[3*i+2] = _mesh->point(*fvIt)[2];
+            i++;
+            ++fvIt;
+            if (_mesh->data(*fvIt).value > 0)
+            {
+                triCols[3 * i + 0] = 255;
+                triCols[3 * i + 1] = 255 - std::min((_mesh->data(*fvIt).value / range) * 255.0, 255.0);
+                triCols[3 * i + 2] = 255 - std::min((_mesh->data(*fvIt).value / range) * 255.0, 255.0);
+            }
+            else
+            {
+                triCols[3 * i + 2] = 255;
+                triCols[3 * i + 1] = 255 - std::min((-_mesh->data(*fvIt).value / range) * 255.0, 255.0);
+                triCols[3 * i + 0] = 255 - std::min((-_mesh->data(*fvIt).value / range) * 255.0, 255.0);
+            }
+            triVerts[3 * i + 0] = _mesh->point(*fvIt)[0];
+            triVerts[3 * i + 1] = _mesh->point(*fvIt)[1];
+            triVerts[3 * i + 2] = _mesh->point(*fvIt)[2];
             triIndiceArray[i] = i;
 
-            i++; ++fvIt;
-            if(_mesh->data(*fvIt).value > 0){triCols[3*i+0] = 255; triCols[3*i+1] = 255 - std::min((_mesh->data(*fvIt).value/range) * 255.0, 255.0); triCols[3*i+2] = 255 - std::min((_mesh->data(*fvIt).value/range) * 255.0, 255.0);}
-            else{triCols[3*i+2] = 255; triCols[3*i+1] = 255 - std::min((-_mesh->data(*fvIt).value/range) * 255.0, 255.0); triCols[3*i+0] = 255 - std::min((-_mesh->data(*fvIt).value/range) * 255.0, 255.0);}
-            triVerts[3*i+0] = _mesh->point(*fvIt)[0]; triVerts[3*i+1] = _mesh->point(*fvIt)[1]; triVerts[3*i+2] = _mesh->point(*fvIt)[2];
+            i++;
+            ++fvIt;
+            if (_mesh->data(*fvIt).value > 0)
+            {
+                triCols[3 * i + 0] = 255;
+                triCols[3 * i + 1] = 255 - std::min((_mesh->data(*fvIt).value / range) * 255.0, 255.0);
+                triCols[3 * i + 2] = 255 - std::min((_mesh->data(*fvIt).value / range) * 255.0, 255.0);
+            }
+            else
+            {
+                triCols[3 * i + 2] = 255;
+                triCols[3 * i + 1] = 255 - std::min((-_mesh->data(*fvIt).value / range) * 255.0, 255.0);
+                triCols[3 * i + 0] = 255 - std::min((-_mesh->data(*fvIt).value / range) * 255.0, 255.0);
+            }
+            triVerts[3 * i + 0] = _mesh->point(*fvIt)[0];
+            triVerts[3 * i + 1] = _mesh->point(*fvIt)[1];
+            triVerts[3 * i + 2] = _mesh->point(*fvIt)[2];
             triIndiceArray[i] = i;
 
             i++;
         }
+
+        /*for(int bb_index = 0; bb_index < sizeof(bb); bb_index += 3){
+            triCols[3 * i + 0] = 0;
+            triCols[3 * i + 1] = 0;
+            triCols[3 * i + 2] = 255;
+            triVerts[3 * i + 0] = bb[bb_index];
+            triVerts[3 * i + 1] = bb[bb_index + 1];
+            triVerts[3 * i + 2] = bb[bb_index + 2];
+            triIndiceArray[i] = i;
+
+            i++;
+        }*/
     }
     else
     {
         MyMesh::ConstFaceIter fIt(_mesh->faces_begin()), fEnd(_mesh->faces_end());
         MyMesh::ConstFaceVertexIter fvIt;
-        for (; fIt!=fEnd; ++fIt)
+        for (; fIt != fEnd; ++fIt)
         {
             fvIt = _mesh->cfv_iter(*fIt);
-            triCols[3*i+0] = _mesh->color(*fIt)[0]; triCols[3*i+1] = _mesh->color(*fIt)[1]; triCols[3*i+2] = _mesh->color(*fIt)[2];
-            triVerts[3*i+0] = _mesh->point(*fvIt)[0]; triVerts[3*i+1] = _mesh->point(*fvIt)[1]; triVerts[3*i+2] = _mesh->point(*fvIt)[2];
+            triCols[3 * i + 0] = _mesh->color(*fIt)[0];
+            triCols[3 * i + 1] = _mesh->color(*fIt)[1];
+            triCols[3 * i + 2] = _mesh->color(*fIt)[2];
+            triVerts[3 * i + 0] = _mesh->point(*fvIt)[0];
+            triVerts[3 * i + 1] = _mesh->point(*fvIt)[1];
+            triVerts[3 * i + 2] = _mesh->point(*fvIt)[2];
             triIndiceArray[i] = i;
 
-            i++; ++fvIt;
-            triCols[3*i+0] = _mesh->color(*fIt)[0]; triCols[3*i+1] = _mesh->color(*fIt)[1]; triCols[3*i+2] = _mesh->color(*fIt)[2];
-            triVerts[3*i+0] = _mesh->point(*fvIt)[0]; triVerts[3*i+1] = _mesh->point(*fvIt)[1]; triVerts[3*i+2] = _mesh->point(*fvIt)[2];
+            i++;
+            ++fvIt;
+            triCols[3 * i + 0] = _mesh->color(*fIt)[0];
+            triCols[3 * i + 1] = _mesh->color(*fIt)[1];
+            triCols[3 * i + 2] = _mesh->color(*fIt)[2];
+            triVerts[3 * i + 0] = _mesh->point(*fvIt)[0];
+            triVerts[3 * i + 1] = _mesh->point(*fvIt)[1];
+            triVerts[3 * i + 2] = _mesh->point(*fvIt)[2];
             triIndiceArray[i] = i;
 
-            i++; ++fvIt;
-            triCols[3*i+0] = _mesh->color(*fIt)[0]; triCols[3*i+1] = _mesh->color(*fIt)[1]; triCols[3*i+2] = _mesh->color(*fIt)[2];
-            triVerts[3*i+0] = _mesh->point(*fvIt)[0]; triVerts[3*i+1] = _mesh->point(*fvIt)[1]; triVerts[3*i+2] = _mesh->point(*fvIt)[2];
+            i++;
+            ++fvIt;
+            triCols[3 * i + 0] = _mesh->color(*fIt)[0];
+            triCols[3 * i + 1] = _mesh->color(*fIt)[1];
+            triCols[3 * i + 2] = _mesh->color(*fIt)[2];
+            triVerts[3 * i + 0] = _mesh->point(*fvIt)[0];
+            triVerts[3 * i + 1] = _mesh->point(*fvIt)[1];
+            triVerts[3 * i + 2] = _mesh->point(*fvIt)[2];
             triIndiceArray[i] = i;
 
             i++;
         }
-    }
 
+        /*for(int bb_index = 0; bb_index < sizeof(bb); bb_index += 3){
+            triCols[3 * i + 0] = 0;
+            triCols[3 * i + 1] = 0;
+            triCols[3 * i + 2] = 255;
+            triVerts[3 * i + 0] = bb[bb_index];
+            triVerts[3 * i + 1] = bb[bb_index + 1];
+            triVerts[3 * i + 2] = bb[bb_index + 2];
+            triIndiceArray[i] = i;
+
+            i++;
+        }*/
+    }
 
     ui->displayWidget->loadMesh(triVerts, triCols, _mesh->n_faces() * 3 * 3, triIndiceArray, _mesh->n_faces() * 3);
 
@@ -435,53 +565,102 @@ void MainWindow::displayMesh(MyMesh* _mesh, bool isTemperatureMap, float mapRang
     delete[] triCols;
     delete[] triVerts;
 
-    GLuint* linesIndiceArray = new GLuint[_mesh->n_edges() * 2];
-    GLfloat* linesCols = new GLfloat[_mesh->n_edges() * 2 * 3];
-    GLfloat* linesVerts = new GLfloat[_mesh->n_edges() * 2 * 3];
+    GLuint *linesIndiceArray = new GLuint[_mesh->n_edges() * 2 + 12 * 2];
+    GLfloat *linesCols = new GLfloat[_mesh->n_edges() * 2 * 3 + 12 * 2 * 3];
+    GLfloat *linesVerts = new GLfloat[_mesh->n_edges() * 2 * 3 + 12 * 2 * 3];
+
+    QVector<float> bb_lines = {
+        -0.5f, 0.5f, 0.5f,
+        0.5f, 0.5f, 0.5f,
+
+        -0.5f, 0.5f, 0.5f,
+        -0.5f, -0.5f, 0.5f,
+
+        -0.5f, -0.5f, 0.5f,
+        0.5f, -0.5f, 0.5f,
+
+        0.5f, -0.5f, 0.5f,
+        0.5f, 0.5f, 0.5f,
+
+        -0.5f, 0.5f, -0.5f,
+        0.5f, 0.5f, -0.5f,
+
+        -0.5f, 0.5f, -0.5f,
+        -0.5f, -0.5f, -0.5f,
+
+        -0.5f, -0.5f, -0.5f,
+        0.5f, -0.5f, -0.5f,
+
+        0.5f, -0.5f, -0.5f,
+        0.5f, 0.5f, -0.5f,
+
+        -0.5f, 0.5f, 0.5f,
+        -0.5f, 0.5f, -0.5f,
+
+        0.5f, 0.5f, 0.5f,
+        0.5f, 0.5f, -0.5f,
+
+        -0.5f, -0.5f, 0.5f,
+        -0.5f, -0.5f, -0.5f,
+
+        0.5f, -0.5f, 0.5f,
+        0.5f, -0.5f, -0.5f,
+    };
 
     i = 0;
-    QHash<float, QList<int> > edgesIDbyThickness;
+    QHash<float, QList<int>> edgesIDbyThickness;
     for (MyMesh::EdgeIter eit = _mesh->edges_begin(); eit != _mesh->edges_end(); ++eit)
     {
         float t = _mesh->data(*eit).thickness;
-        if(t > 0)
+        if (t > 0)
         {
-            if(!edgesIDbyThickness.contains(t))
+            if (!edgesIDbyThickness.contains(t))
                 edgesIDbyThickness[t] = QList<int>();
             edgesIDbyThickness[t].append((*eit).idx());
         }
     }
-    QHashIterator<float, QList<int> > it(edgesIDbyThickness);
-    QList<QPair<float, int> > edgeSizes;
+    QHashIterator<float, QList<int>> it(edgesIDbyThickness);
+    QList<QPair<float, int>> edgeSizes;
     while (it.hasNext())
     {
         it.next();
 
-        for(int e = 0; e < it.value().size(); e++)
+        for (int e = 0; e < it.value().size(); e++)
         {
             int eidx = it.value().at(e);
 
             MyMesh::VertexHandle vh1 = _mesh->to_vertex_handle(_mesh->halfedge_handle(_mesh->edge_handle(eidx), 0));
-            linesVerts[3*i+0] = _mesh->point(vh1)[0];
-            linesVerts[3*i+1] = _mesh->point(vh1)[1];
-            linesVerts[3*i+2] = _mesh->point(vh1)[2];
-            linesCols[3*i+0] = _mesh->color(_mesh->edge_handle(eidx))[0];
-            linesCols[3*i+1] = _mesh->color(_mesh->edge_handle(eidx))[1];
-            linesCols[3*i+2] = _mesh->color(_mesh->edge_handle(eidx))[2];
+            linesVerts[3 * i + 0] = _mesh->point(vh1)[0];
+            linesVerts[3 * i + 1] = _mesh->point(vh1)[1];
+            linesVerts[3 * i + 2] = _mesh->point(vh1)[2];
+            linesCols[3 * i + 0] = _mesh->color(_mesh->edge_handle(eidx))[0];
+            linesCols[3 * i + 1] = _mesh->color(_mesh->edge_handle(eidx))[1];
+            linesCols[3 * i + 2] = _mesh->color(_mesh->edge_handle(eidx))[2];
             linesIndiceArray[i] = i;
             i++;
 
             MyMesh::VertexHandle vh2 = _mesh->from_vertex_handle(_mesh->halfedge_handle(_mesh->edge_handle(eidx), 0));
-            linesVerts[3*i+0] = _mesh->point(vh2)[0];
-            linesVerts[3*i+1] = _mesh->point(vh2)[1];
-            linesVerts[3*i+2] = _mesh->point(vh2)[2];
-            linesCols[3*i+0] = _mesh->color(_mesh->edge_handle(eidx))[0];
-            linesCols[3*i+1] = _mesh->color(_mesh->edge_handle(eidx))[1];
-            linesCols[3*i+2] = _mesh->color(_mesh->edge_handle(eidx))[2];
+            linesVerts[3 * i + 0] = _mesh->point(vh2)[0];
+            linesVerts[3 * i + 1] = _mesh->point(vh2)[1];
+            linesVerts[3 * i + 2] = _mesh->point(vh2)[2];
+            linesCols[3 * i + 0] = _mesh->color(_mesh->edge_handle(eidx))[0];
+            linesCols[3 * i + 1] = _mesh->color(_mesh->edge_handle(eidx))[1];
+            linesCols[3 * i + 2] = _mesh->color(_mesh->edge_handle(eidx))[2];
             linesIndiceArray[i] = i;
             i++;
         }
         edgeSizes.append(qMakePair(it.key(), it.value().size()));
+    }
+
+    for( int bb_index = 0; bb_index < bb_lines.size(); bb_index = bb_index + 3 ) {
+        linesVerts[3 * i + 0] = (bb_lines[bb_index] + bb_values[0]) * bb_values[3];
+        linesVerts[3 * i + 1] = (bb_lines[bb_index + 1] + bb_values[1]) * bb_values[4];
+        linesVerts[3 * i + 2] = (bb_lines[bb_index + 2] + bb_values[2]) * bb_values[5];
+        linesCols[3 * i + 0] = 0;
+        linesCols[3 * i + 1] = 0;
+        linesCols[3 * i + 2] = 255;
+
+        i++;
     }
 
     ui->displayWidget->loadLines(linesVerts, linesCols, i * 3, linesIndiceArray, i, edgeSizes);
@@ -490,39 +669,39 @@ void MainWindow::displayMesh(MyMesh* _mesh, bool isTemperatureMap, float mapRang
     delete[] linesCols;
     delete[] linesVerts;
 
-    GLuint* pointsIndiceArray = new GLuint[_mesh->n_vertices()];
-    GLfloat* pointsCols = new GLfloat[_mesh->n_vertices() * 3];
-    GLfloat* pointsVerts = new GLfloat[_mesh->n_vertices() * 3];
+    GLuint *pointsIndiceArray = new GLuint[_mesh->n_vertices()];
+    GLfloat *pointsCols = new GLfloat[_mesh->n_vertices() * 3];
+    GLfloat *pointsVerts = new GLfloat[_mesh->n_vertices() * 3];
 
     i = 0;
-    QHash<float, QList<int> > vertsIDbyThickness;
+    QHash<float, QList<int>> vertsIDbyThickness;
     for (MyMesh::VertexIter vit = _mesh->vertices_begin(); vit != _mesh->vertices_end(); ++vit)
     {
         float t = _mesh->data(*vit).thickness;
-        if(t > 0)
+        if (t > 0)
         {
-            if(!vertsIDbyThickness.contains(t))
+            if (!vertsIDbyThickness.contains(t))
                 vertsIDbyThickness[t] = QList<int>();
             vertsIDbyThickness[t].append((*vit).idx());
         }
     }
-    QHashIterator<float, QList<int> > vitt(vertsIDbyThickness);
-    QList<QPair<float, int> > vertsSizes;
+    QHashIterator<float, QList<int>> vitt(vertsIDbyThickness);
+    QList<QPair<float, int>> vertsSizes;
 
     while (vitt.hasNext())
     {
         vitt.next();
 
-        for(int v = 0; v < vitt.value().size(); v++)
+        for (int v = 0; v < vitt.value().size(); v++)
         {
             int vidx = vitt.value().at(v);
 
-            pointsVerts[3*i+0] = _mesh->point(_mesh->vertex_handle(vidx))[0];
-            pointsVerts[3*i+1] = _mesh->point(_mesh->vertex_handle(vidx))[1];
-            pointsVerts[3*i+2] = _mesh->point(_mesh->vertex_handle(vidx))[2];
-            pointsCols[3*i+0] = _mesh->color(_mesh->vertex_handle(vidx))[0];
-            pointsCols[3*i+1] = _mesh->color(_mesh->vertex_handle(vidx))[1];
-            pointsCols[3*i+2] = _mesh->color(_mesh->vertex_handle(vidx))[2];
+            pointsVerts[3 * i + 0] = _mesh->point(_mesh->vertex_handle(vidx))[0];
+            pointsVerts[3 * i + 1] = _mesh->point(_mesh->vertex_handle(vidx))[1];
+            pointsVerts[3 * i + 2] = _mesh->point(_mesh->vertex_handle(vidx))[2];
+            pointsCols[3 * i + 0] = _mesh->color(_mesh->vertex_handle(vidx))[0];
+            pointsCols[3 * i + 1] = _mesh->color(_mesh->vertex_handle(vidx))[1];
+            pointsCols[3 * i + 2] = _mesh->color(_mesh->vertex_handle(vidx))[2];
             pointsIndiceArray[i] = i;
             i++;
         }
@@ -535,7 +714,6 @@ void MainWindow::displayMesh(MyMesh* _mesh, bool isTemperatureMap, float mapRang
     delete[] pointsCols;
     delete[] pointsVerts;
 }
-
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow)
 {
