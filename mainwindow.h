@@ -54,7 +54,9 @@ public:
     float fctK(MyMesh* _mesh, int vertexID);
     float fctH(MyMesh* _mesh, int vertexID);
     MyMesh::Point barycentreForme(MyMesh* _mesh);
-    QVector<float> boiteEnglobante(MyMesh* _mesh);
+    void boiteEnglobante(MyMesh* _mesh);
+    void nb_elements(MyMesh* _mesh);
+    void verification_voisins(MyMesh* _mesh);
 
 
 

@@ -6,6 +6,70 @@
 
 /* **** début de la partie à compléter **** */
 
+void MainWindow::nb_elements(MyMesh* _mesh)
+{
+    qDebug() << _mesh->n_vertices() << "sommets,"<< _mesh->n_faces() << "faces";
+}
+
+
+void MainWindow::verification_voisins(MyMesh* _mesh)
+{
+    int nb_face_sans_voisin = 0;
+    int nb_point_sans_arrete = 0;
+    int nb_arrete_sans_face = 0;
+
+    for(MyMesh::FaceIter curF = _mesh->faces_begin() ; curF != _mesh->faces_end() ; curF ++){
+        FaceHandle facf = *curF;
+        if(_mesh->valence(facf) == 0){
+            nb_face_sans_voisin += 1;
+            qDebug() << "la face numero " << facf.idx() << " n'a pas de voisin";
+        }
+    }
+    if (nb_face_sans_voisin == 0){
+        qDebug() << "toutes les faces ont au moins un voisin";
+    }
+
+    for(MyMesh::VertexIter curV = _mesh->vertices_begin() ; curV != _mesh->vertices_end() ; curV ++){
+        int nb_arretes = 0;
+        VertexHandle verV = *curV;
+        for (MyMesh::VertexEdgeIter verEdge = _mesh->ve_iter(verV); verEdge.is_valid(); verEdge ++){
+            nb_arretes += 1;
+        }
+        if(nb_arretes == 0){
+            nb_point_sans_arrete += 1;
+            qDebug() << "le point numero " << verV.idx() << " n'a pas d'arrete";
+        }
+    }
+    if (nb_point_sans_arrete == 0){
+        qDebug() << "tous les points ont au moins une arrete";
+    }
+
+    for(MyMesh::EdgeIter curE = _mesh->edges_begin() ; curE != _mesh->edges_end() ; curE ++){
+        int nb_faces = 0;
+        EdgeHandle edgE = *curE;
+        VertexHandle sommet1 = _mesh->to_vertex_handle(_mesh->halfedge_handle(edgE, 1));
+        VertexHandle sommet2 = _mesh->from_vertex_handle(_mesh->halfedge_handle(edgE, 1));
+
+        int face_sommet1 = 0;
+        int face_sommet2 = 0;
+        for (MyMesh::VertexFaceIter verFace = _mesh->vf_iter(sommet1); verFace.is_valid(); verFace ++){
+            face_sommet1 += 1;
+        }
+
+        for (MyMesh::VertexFaceIter verFace = _mesh->vf_iter(sommet2); verFace.is_valid(); verFace ++){
+            face_sommet2 += 1;
+        }
+
+        if (face_sommet1 == 0 && face_sommet2 == 0){
+            nb_faces += 1;
+            qDebug() << "l'arrete numero " << edgE.idx() << " n'a pas de face associée";
+        }
+    }
+    if (nb_arrete_sans_face == 0){
+        qDebug() << "toutes les arretes appartiennent à au moins une face";
+    }
+}
+
 float MainWindow::faceArea(MyMesh* _mesh, int faceID)
 {
     FaceHandle fh = _mesh->face_handle(faceID);
@@ -140,7 +204,7 @@ MyMesh::Point MainWindow::barycentreForme(MyMesh* _mesh) {
     return bary;
 }
 
-QVector<float> MainWindow::boiteEnglobante(MyMesh* _mesh){
+void MainWindow::boiteEnglobante(MyMesh* _mesh){
     float minx = _mesh->point(_mesh->vertex_handle(0))[0];
     float miny = _mesh->point(_mesh->vertex_handle(0))[1];
     float minz = _mesh->point(_mesh->vertex_handle(0))[2];
@@ -173,7 +237,7 @@ QVector<float> MainWindow::boiteEnglobante(MyMesh* _mesh){
     QVector<float> values = {centerx, centery, centerz,
                             sizex, sizey, sizez};
 
-    return values;
+    qDebug() << values;
 }
 
 
@@ -377,6 +441,8 @@ void MainWindow::on_pushButton_chargement_clicked()
 
     // on affiche le maillage
     displayMesh(&mesh);
+    nb_elements(&mesh);
+    verification_voisins(&mesh);
 }
 
 void MainWindow::on_pushButton_bb_clicked()
@@ -410,7 +476,7 @@ void MainWindow::resetAllColorsAndThickness(MyMesh* _mesh)
 // charge un objet MyMesh dans l'environnement OpenGL
 void MainWindow::displayMesh(MyMesh *_mesh, bool isTemperatureMap, float mapRange)
 {
-    QVector<float> bb_values = boiteEnglobante(&mesh);
+    //QVector<float> bb_values = boiteEnglobante(&mesh);
 
     GLuint *triIndiceArray = new GLuint[_mesh->n_faces() * 3];
     GLfloat *triCols = new GLfloat[_mesh->n_faces() * 3 * 3];
@@ -652,7 +718,7 @@ void MainWindow::displayMesh(MyMesh *_mesh, bool isTemperatureMap, float mapRang
         edgeSizes.append(qMakePair(it.key(), it.value().size()));
     }
 
-    for( int bb_index = 0; bb_index < bb_lines.size(); bb_index = bb_index + 3 ) {
+    /*for( int bb_index = 0; bb_index < bb_lines.size(); bb_index = bb_index + 3 ) {
         linesVerts[3 * i + 0] = (bb_lines[bb_index] + bb_values[0]) * bb_values[3];
         linesVerts[3 * i + 1] = (bb_lines[bb_index + 1] + bb_values[1]) * bb_values[4];
         linesVerts[3 * i + 2] = (bb_lines[bb_index + 2] + bb_values[2]) * bb_values[5];
@@ -661,7 +727,7 @@ void MainWindow::displayMesh(MyMesh *_mesh, bool isTemperatureMap, float mapRang
         linesCols[3 * i + 2] = 255;
 
         i++;
-    }
+    }*/
 
     ui->displayWidget->loadLines(linesVerts, linesCols, i * 3, linesIndiceArray, i, edgeSizes);
 
