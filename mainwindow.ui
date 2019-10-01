@@ -66,13 +66,6 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="pushButton_bb">
-         <property name="text">
-          <string>Boîte englobante</string>
-         </property>
-        </widget>
-       </item>
-       <item>
         <spacer name="verticalSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
@@ -106,7 +99,7 @@
      <x>0</x>
      <y>0</y>
      <width>632</width>
-     <height>20</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>

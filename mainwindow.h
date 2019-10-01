@@ -43,7 +43,7 @@ public:
     VectorT <float,3> LongueurArc(MyMesh *_mesh, int vertexID, int vertexID2);
 
 
-    float faceArea(MyMesh* _mesh, int faceID);
+    double faceArea(MyMesh* _mesh, int faceID);
     float angleFF(MyMesh *_mesh, int faceID0, int faceID1, int vertID0, int vertID1);
     float angleEE(MyMesh* _mesh, int vertexID, int faceID);
     void H_Curv(MyMesh* _mesh);
@@ -57,7 +57,8 @@ public:
     void boiteEnglobante(MyMesh* _mesh);
     void nb_elements(MyMesh* _mesh);
     void verification_voisins(MyMesh* _mesh);
-
+    void frequence_aires(MyMesh* _mesh);
+    void frequence_voisinage_sommets(MyMesh* _mesh);
 
 
     void displayMesh(MyMesh *_mesh, bool isTemperatureMap = false, float mapRange = -1);
@@ -68,8 +69,6 @@ private slots:
     void on_pushButton_chargement_clicked();
     void on_pushButton_angleArea_clicked();
     void on_pushButton_bary_clicked();
-
-    void on_pushButton_bb_clicked();
 
 private:
 

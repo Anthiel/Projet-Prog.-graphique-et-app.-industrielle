@@ -11,22 +11,23 @@ void MainWindow::nb_elements(MyMesh* _mesh)
     qDebug() << _mesh->n_vertices() << "sommets,"<< _mesh->n_faces() << "faces";
 }
 
-
 void MainWindow::verification_voisins(MyMesh* _mesh)
 {
-    int nb_face_sans_voisin = 0;
-    int nb_point_sans_arrete = 0;
-    int nb_arrete_sans_face = 0;
+    std::vector<int> faces_sans_voisin;
+    std::vector<int> points_sans_arrete;
+    std::vector<int> arrete_sans_face;
 
     for(MyMesh::FaceIter curF = _mesh->faces_begin() ; curF != _mesh->faces_end() ; curF ++){
         FaceHandle facf = *curF;
         if(_mesh->valence(facf) == 0){
-            nb_face_sans_voisin += 1;
-            qDebug() << "la face numero " << facf.idx() << " n'a pas de voisin";
-        }
+            faces_sans_voisin.push_back(facf.idx());
+         }
     }
-    if (nb_face_sans_voisin == 0){
+    if (faces_sans_voisin.size() == 0){
         qDebug() << "toutes les faces ont au moins un voisin";
+    }
+    else {
+        qDebug() << "Les faces sans faces voisines sont : " << faces_sans_voisin;
     }
 
     for(MyMesh::VertexIter curV = _mesh->vertices_begin() ; curV != _mesh->vertices_end() ; curV ++){
@@ -36,16 +37,17 @@ void MainWindow::verification_voisins(MyMesh* _mesh)
             nb_arretes += 1;
         }
         if(nb_arretes == 0){
-            nb_point_sans_arrete += 1;
-            qDebug() << "le point numero " << verV.idx() << " n'a pas d'arrete";
+            points_sans_arrete.push_back(verV.idx());
         }
     }
-    if (nb_point_sans_arrete == 0){
+    if (points_sans_arrete.size() == 0){
         qDebug() << "tous les points ont au moins une arrete";
+    }
+    else {
+        qDebug() << "Les points sans arrêtes adjacentes sont : " << points_sans_arrete;
     }
 
     for(MyMesh::EdgeIter curE = _mesh->edges_begin() ; curE != _mesh->edges_end() ; curE ++){
-        int nb_faces = 0;
         EdgeHandle edgE = *curE;
         VertexHandle sommet1 = _mesh->to_vertex_handle(_mesh->halfedge_handle(edgE, 1));
         VertexHandle sommet2 = _mesh->from_vertex_handle(_mesh->halfedge_handle(edgE, 1));
@@ -61,16 +63,18 @@ void MainWindow::verification_voisins(MyMesh* _mesh)
         }
 
         if (face_sommet1 == 0 && face_sommet2 == 0){
-            nb_faces += 1;
-            qDebug() << "l'arrete numero " << edgE.idx() << " n'a pas de face associée";
+            arrete_sans_face.push_back(edgE.idx());
         }
     }
-    if (nb_arrete_sans_face == 0){
+    if (arrete_sans_face.size() == 0){
         qDebug() << "toutes les arretes appartiennent à au moins une face";
+    }
+    else {
+        qDebug() << "Les arrêtes sans faces adjacentes sont : " << arrete_sans_face;
     }
 }
 
-float MainWindow::faceArea(MyMesh* _mesh, int faceID)
+double MainWindow::faceArea(MyMesh* _mesh, int faceID)
 {
     FaceHandle fh = _mesh->face_handle(faceID);
     std::vector <int> pointID;
@@ -204,6 +208,7 @@ MyMesh::Point MainWindow::barycentreForme(MyMesh* _mesh) {
     return bary;
 }
 
+
 void MainWindow::boiteEnglobante(MyMesh* _mesh){
     float minx = _mesh->point(_mesh->vertex_handle(0))[0];
     float miny = _mesh->point(_mesh->vertex_handle(0))[1];
@@ -239,7 +244,6 @@ void MainWindow::boiteEnglobante(MyMesh* _mesh){
 
     qDebug() << values;
 }
-
 
 
 VectorT <float,3> MainWindow::LongueurArc(MyMesh *_mesh, int vertexID, int vertexID2){
@@ -283,7 +287,6 @@ float MainWindow::angleEE(MyMesh* _mesh, int vertexID,  int faceID)
     AireBarycentrique(_mesh, vertexID);
     return acos(AB.normalized()|AC.normalized());
 }
-
 
 
 float MainWindow::fctH(MyMesh* _mesh, int vertexID){
@@ -391,7 +394,90 @@ void MainWindow::K_Curv(MyMesh* _mesh)
 }
 /* **** fin de la partie à compléter **** */
 
+void MainWindow::frequence_aires(MyMesh* _mesh)
+{
+    double maxA = faceArea(&mesh, 0);
+    double minA = faceArea(&mesh, 0);
+    double diff;
+    std::vector <int> compt(10, 0);
+    std::vector <double> ratio(10, 0);
 
+    for(MyMesh::FaceIter curF = _mesh->faces_begin() ; curF != _mesh->faces_end() ; curF ++){
+        if (faceArea(&mesh, (*curF).idx()) > maxA){
+            maxA = faceArea(&mesh, (*curF).idx());
+        }
+        else if (faceArea(&mesh, (*curF).idx()) < minA){
+            minA = faceArea(&mesh, (*curF).idx());
+        }
+    }
+
+    diff = maxA-minA;
+
+    for(MyMesh::FaceIter curF = _mesh->faces_begin() ; curF != _mesh->faces_end() ; curF ++){
+        if (faceArea(&mesh, (*curF).idx()) > minA && faceArea(&mesh, (*curF).idx()) <= minA+((10.0*diff)/100.0)){
+            compt[0] ++;
+        }
+        else if (faceArea(&mesh, (*curF).idx()) > minA+((10.0*diff)/100.0) && faceArea(&mesh, (*curF).idx()) <= minA+((20.0*diff)/100.0)){
+            compt[1] ++;
+        }
+        else if (faceArea(&mesh, (*curF).idx()) > minA+((20.0*diff)/100.0) && faceArea(&mesh, (*curF).idx()) <= minA+((30.0*diff)/100.0)){
+            compt[2] ++;
+        }
+        else if (faceArea(&mesh, (*curF).idx()) > minA+((30.0*diff)/100.0) && faceArea(&mesh, (*curF).idx()) <= minA+((40.0*diff)/100.0)){
+            compt[3] ++;
+        }
+        else if (faceArea(&mesh, (*curF).idx()) > minA+((40.0*diff)/100.0) && faceArea(&mesh, (*curF).idx()) <= minA+((50.0*diff)/100.0)){
+            compt[4] ++;
+        }
+        else if (faceArea(&mesh, (*curF).idx()) > minA+((50.0*diff)/100.0) && faceArea(&mesh, (*curF).idx()) <= minA+((60.0*diff)/100.0)){
+            compt[5] ++;
+        }
+        else if (faceArea(&mesh, (*curF).idx()) > minA+((60.0*diff)/100.0) && faceArea(&mesh, (*curF).idx()) <= minA+((70.0*diff)/100.0)){
+            compt[6] ++;
+        }
+        else if (faceArea(&mesh, (*curF).idx()) > minA+((70.0*diff)/100.0) && faceArea(&mesh, (*curF).idx()) <= minA+((80.0*diff)/100.0)){
+            compt[7] ++;
+        }
+        else if (faceArea(&mesh, (*curF).idx()) > minA+((80.0*diff)/100.0) && faceArea(&mesh, (*curF).idx()) <= minA+((90.0*diff)/100.0)){
+            compt[8] ++;
+        }
+        else if (faceArea(&mesh, (*curF).idx()) > minA+((90.0*diff)/100.0) && faceArea(&mesh, (*curF).idx()) <= maxA){
+            compt[9] ++;
+        }
+    }
+
+    for (unsigned int i = 0; i < compt.size() ; i++){
+        ratio[i] = (1.0*compt[i])/(1.0*_mesh->n_faces())*100;
+        qDebug() << i*10 << "-" << i*10+10 << " aire : " << ratio[i] << "%";
+    }
+}
+
+void MainWindow:: frequence_voisinage_sommets(MyMesh* _mesh)
+{
+    unsigned int maxVal = _mesh->valence(_mesh->vertex_handle(0));
+    unsigned int minVal = _mesh->valence(_mesh->vertex_handle(0));
+
+    for(MyMesh::VertexIter curV = _mesh->vertices_begin() ; curV != _mesh->vertices_end() ; curV ++){
+        if (_mesh->valence((*curV)) < minVal){
+            minVal = _mesh->valence((*curV));
+        }
+        else if (_mesh->valence((*curV)) > maxVal){
+            maxVal = _mesh->valence((*curV));
+        }
+    }
+
+    std::vector <int> compt(maxVal-minVal, 0);
+    std::vector <double> ratio(maxVal-minVal, 0);
+
+    for (MyMesh::VertexIter curV = _mesh->vertices_begin() ; curV != _mesh->vertices_end() ; curV ++){
+        compt[_mesh->valence((*curV))-minVal] ++;
+    }
+
+    for (unsigned int i = 0; i < compt.size() ; i++){
+        ratio[i] = (1.0*compt[i])/(1.0*_mesh->n_vertices())*100;
+        qDebug() << "sommets à" << i+minVal << "voisins :" << ratio[i] << "%";
+    }
+}
 
 /* **** début de la partie boutons et IHM **** */
 void MainWindow::on_pushButton_bary_clicked()
@@ -443,12 +529,10 @@ void MainWindow::on_pushButton_chargement_clicked()
     displayMesh(&mesh);
     nb_elements(&mesh);
     verification_voisins(&mesh);
+    frequence_aires(&mesh);
+    frequence_voisinage_sommets(&mesh);
 }
 
-void MainWindow::on_pushButton_bb_clicked()
-{
-    boiteEnglobante(&mesh);
-}
 /* **** fin de la partie boutons et IHM **** */
 
 /* **** fonctions supplémentaires **** */
