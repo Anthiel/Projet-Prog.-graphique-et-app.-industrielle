@@ -35,8 +35,10 @@ public:
 
     QVector<float> boiteEnglobante(MyMesh* _mesh);
     MyMesh::Point barycentreForme(MyMesh* _mesh);
-
-
+    void showSelection(MyMesh* _mesh);
+    void showFaceNormal(MyMesh* _mesh);
+    void showVertexNormal(MyMesh* _mesh);
+    void deviationNormales(MyMesh* _mesh);
 
     void displayMesh(MyMesh *_mesh, bool isTemperatureMap = false, float mapRange = -1);
     void resetAllColorsAndThickness(MyMesh* _mesh);
@@ -47,6 +49,14 @@ private slots:
 
     void on_pushButton_bary_clicked();
     void on_pushButton_box_clicked();
+
+    void on_vertexSelect_valueChanged(int arg1);
+
+    void on_edgeSelect_valueChanged(int arg1);
+
+    void on_faceSelect_valueChanged(int arg1);
+    
+    void on_pushButton_dev_clicked();
 
 private:
 

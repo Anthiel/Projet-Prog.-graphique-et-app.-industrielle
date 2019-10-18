@@ -243,6 +243,90 @@ MyMesh::Point MainWindow::barycentreForme(MyMesh* _mesh) {
     return bary;
 }
 
+void MainWindow::showSelection(MyMesh* _mesh){
+    resetAllColorsAndThickness(_mesh);
+
+        if(faceSelection > -1) {
+            FaceHandle faceHandle = _mesh->face_handle(faceSelection);
+            _mesh->set_color(faceHandle, MyMesh::Color(50,50,255));
+
+            MyMesh::FaceEdgeIter fh_it = mesh.fe_iter(faceHandle);
+            for(; fh_it.is_valid(); ++fh_it) {
+                EdgeHandle edgeHandle = *fh_it;
+                _mesh->set_color(edgeHandle, MyMesh::Color(0, 0, 255));
+                _mesh->data(edgeHandle).thickness = 3;
+            }
+
+            MyMesh::FaceVertexIter fh_v = mesh.fv_iter(faceHandle);
+            for(; fh_v.is_valid(); ++fh_v) {
+                VertexHandle vertexHandle = *fh_v;
+                _mesh->set_color(vertexHandle, MyMesh::Color(0, 0, 255));
+                _mesh->data(vertexHandle).thickness = 7;
+            }
+        }
+
+        if(edgeSelection > -1) {
+            EdgeHandle edgeHandle = _mesh->edge_handle(edgeSelection);
+            _mesh->set_color(edgeHandle, MyMesh::Color(0, 255, 0));
+            _mesh->data(edgeHandle).thickness = 3;
+
+            HalfedgeHandle heh0 = _mesh->halfedge_handle(edgeHandle, 0); // la première demi-arête
+            HalfedgeHandle heh1 = _mesh->halfedge_handle(edgeHandle, 1); // la seconde demi-arête
+
+            VertexHandle v = _mesh->to_vertex_handle(heh0);
+            _mesh->set_color(v, MyMesh::Color(0,255,0));
+            _mesh->data(v).thickness = 7;
+            v = _mesh->to_vertex_handle(heh1);
+            _mesh->set_color(v, MyMesh::Color(0,255,0));
+            _mesh->data(v).thickness = 7;
+        }
+
+        if(vertexSelection > -1) {
+            VertexHandle vertexHandle = _mesh->vertex_handle(vertexSelection);
+            _mesh->set_color(vertexHandle, MyMesh::Color(255, 0, 0));
+            _mesh->data(vertexHandle).thickness = 7;
+        }
+
+        // on affiche le nouveau maillage
+        displayMesh(_mesh);
+}
+
+void MainWindow::showFaceNormal(MyMesh* _mesh){
+    FaceHandle currentFace = _mesh->face_handle(faceSelection);
+    MyMesh::Normal normal = _mesh->calc_face_normal(currentFace);
+    qDebug() << "x: " << normal[0] << " y: " << normal[1] << " z: " << normal[2];
+}
+
+void MainWindow::showVertexNormal(MyMesh* _mesh){
+    VertexHandle currentVertex = _mesh->vertex_handle(vertexSelection);
+    MyMesh::Normal normal = _mesh->calc_vertex_normal(currentVertex);
+    qDebug() << "x: " << normal[0] << " y: " << normal[1] << " z: " << normal[2];
+}
+
+void MainWindow::deviationNormales(MyMesh* _mesh){
+    for (MyMesh::VertexIter curVert = _mesh->vertices_begin(); curVert != _mesh->vertices_end(); curVert++)
+    {
+        VertexHandle currentVertex = *curVert;
+        MyMesh::Normal vertexNormal = _mesh->calc_vertex_normal(currentVertex);
+        QVector<MyMesh::Normal> faceNormals;
+        for(MyMesh::VertexFaceIter curFace = _mesh->vf_iter(currentVertex); curFace.is_valid(); curFace++){
+            faceNormals.push_back(_mesh->calc_face_normal(*curFace));
+        }
+
+        float maxDeviation = 0.0f;
+
+        for(int i = 0 ; i < faceNormals.size() ; ++i){
+            MyMesh::Normal cur = faceNormals[i];
+            float scalar = abs(vertexNormal | cur);
+            if(acos(scalar) > maxDeviation){
+                maxDeviation = acos(scalar);
+            }
+        }
+        _mesh->data(currentVertex).thickness = 5;
+        _mesh->set_color(currentVertex, MyMesh::Color(trunc(255*maxDeviation), 0, 0));
+    }
+    displayMesh(_mesh);
+}
 // Calcul moyenne des normales aux faces concourantes
 
 
@@ -584,6 +668,8 @@ void MainWindow::on_pushButton_chargement_clicked()
     // chargement du fichier .obj dans la variable globale "mesh"
     OpenMesh::IO::read_mesh(mesh, fileName.toUtf8().constData());
 
+    mesh.request_vertex_normals();
+    mesh.request_face_normals();
     mesh.update_normals();
 
     // initialisation des couleurs et épaisseurs (sommets et arêtes) du mesh
@@ -616,3 +702,28 @@ void MainWindow::on_pushButton_bary_clicked()
     this->displayMesh(&mesh, true);
 }
 
+
+void MainWindow::on_vertexSelect_valueChanged(int arg1)
+{
+    vertexSelection = arg1;
+    showSelection(&mesh);
+}
+
+void MainWindow::on_edgeSelect_valueChanged(int arg1)
+{
+    edgeSelection = arg1;
+    showSelection(&mesh);
+    showVertexNormal(&mesh);
+}
+
+void MainWindow::on_faceSelect_valueChanged(int arg1)
+{
+    faceSelection = arg1;
+    showSelection(&mesh);
+    showFaceNormal(&mesh);
+}
+
+void MainWindow::on_pushButton_dev_clicked()
+{
+     deviationNormales(&mesh);
+}
