@@ -1,6 +1,8 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <math.h>
+#include <iostream>
+#include <fstream>
 
 /***************************** Constructor / Destructor *******************************/
 
@@ -88,6 +90,7 @@ void MainWindow::verificationVoisins(MyMesh* _mesh)
     else {
         qDebug() << "Les arrêtes sans faces adjacentes sont : " << arrete_sans_face;
     }
+
 }
 void MainWindow::frequenceAires(MyMesh* _mesh)
 {
@@ -141,10 +144,15 @@ void MainWindow::frequenceAires(MyMesh* _mesh)
         }
     }
 
+    std::ofstream outfile (filename + "Aires.csv");
+
     for (unsigned int i = 0; i < compt.size() ; i++){
         ratio[i] = (1.0*compt[i])/(1.0*_mesh->n_faces())*100;
-        qDebug() << i*10 << "-" << i*10+10 << " aire : " << ratio[i] << "%";
+        outfile << i*10 << "-" << i*10+10 << "," << ratio[i] << std::endl;
+        //qDebug() << i*10 << "-" << i*10+10 << " aire : " << ratio[i] << "%";
     }
+
+    outfile.close();
 }
 void MainWindow::frequenceVoisinageSommets(MyMesh* _mesh)
 {
@@ -167,10 +175,15 @@ void MainWindow::frequenceVoisinageSommets(MyMesh* _mesh)
         compt[_mesh->valence((*curV))-minVal] ++;
     }
 
+    std::ofstream outfile (filename + "Valence.csv");
+
     for (unsigned int i = 0; i < compt.size() ; i++){
         ratio[i] = (1.0*compt[i])/(1.0*_mesh->n_vertices())*100;
-        qDebug() << "sommets à" << i+minVal << "voisins :" << ratio[i] << "%";
+        outfile << i*10 << "-" << i*10+10 << "," << ratio[i] << std::endl;
+        //qDebug() << i*10 << "-" << i*10+10 << " aire : " << ratio[i] << "%";
     }
+
+    outfile.close();
 }
 
 // Calcul de la boîte englobante
@@ -207,6 +220,7 @@ QVector<float> MainWindow::boiteEnglobante(MyMesh* _mesh)
 
     QVector<float> values = {centerx, centery, centerz, sizex, sizey, sizez};
     qDebug() << "Boîte englobante:" << values;
+
 
     return values;
 }
@@ -326,6 +340,46 @@ void MainWindow::deviationNormales(MyMesh* _mesh){
         _mesh->set_color(currentVertex, MyMesh::Color(trunc(255*maxDeviation), 0, 0));
     }
     displayMesh(_mesh);
+}
+
+void MainWindow::anglesDihedres(MyMesh* _mesh){
+    std::vector<int> angleCount(36);
+    for (MyMesh::EdgeIter curEdge = _mesh->edges_begin(); curEdge != _mesh->edges_end(); curEdge++){
+        EdgeHandle current = *curEdge;
+        HalfedgeHandle heh0 = _mesh->halfedge_handle(current, 0);
+        HalfedgeHandle heh1 = _mesh->halfedge_handle(current, 1);
+        FaceHandle f0 = _mesh->face_handle(heh0);
+        FaceHandle f1 = _mesh->face_handle(heh1);
+        if(_mesh->is_valid_handle(f0)){
+            MyMesh::Normal normal0 = _mesh->calc_face_normal(f0);
+            if(_mesh->is_valid_handle(f1)){
+                MyMesh::Normal normal1 = _mesh->calc_face_normal(f1);
+                float scalar = abs(normal0 | normal1);
+                float angle = acos(scalar) * 180 / M_PI;
+                int index = abs(floor(angle / 10));
+                if (isnan(index) || index < 0 ) index = 0;
+                angleCount[index] += 1;
+            }
+            else{
+                continue;
+            }
+        }
+        else{
+            continue;
+        }
+    }
+
+    for(int i = 0 ; i < angleCount.size() ; ++i){
+        qDebug() << i << ": " << angleCount[i];
+    }
+
+    std::ofstream outfile (filename + "Angles.csv");
+
+    for(int i = 0 ; i < angleCount.size() ; ++i){
+         outfile << i * 10 << "-" << (i + 1) * 10 << "," << angleCount[i] <<  std::endl;
+    }
+
+    outfile.close();
 }
 // Calcul moyenne des normales aux faces concourantes
 
@@ -667,6 +721,7 @@ void MainWindow::on_pushButton_chargement_clicked()
 
     // chargement du fichier .obj dans la variable globale "mesh"
     OpenMesh::IO::read_mesh(mesh, fileName.toUtf8().constData());
+    filename = fileName.toUtf8().constData();
 
     mesh.request_vertex_normals();
     mesh.request_face_normals();
@@ -726,4 +781,9 @@ void MainWindow::on_faceSelect_valueChanged(int arg1)
 void MainWindow::on_pushButton_dev_clicked()
 {
      deviationNormales(&mesh);
+}
+
+void MainWindow::on_pushButton_dihedral_clicked()
+{
+    anglesDihedres(&mesh);
 }

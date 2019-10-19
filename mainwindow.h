@@ -6,6 +6,7 @@
 #include <QMessageBox>
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
+#include<string>
 
 #include "util.h"
 
@@ -39,6 +40,7 @@ public:
     void showFaceNormal(MyMesh* _mesh);
     void showVertexNormal(MyMesh* _mesh);
     void deviationNormales(MyMesh* _mesh);
+    void anglesDihedres(MyMesh* _mesh);
 
     void displayMesh(MyMesh *_mesh, bool isTemperatureMap = false, float mapRange = -1);
     void resetAllColorsAndThickness(MyMesh* _mesh);
@@ -58,11 +60,14 @@ private slots:
     
     void on_pushButton_dev_clicked();
 
+    void on_pushButton_dihedral_clicked();
+
 private:
 
     bool modevoisinage;
 
     MyMesh mesh;
+    std::string filename;
 
     int vertexSelection;
     int edgeSelection;

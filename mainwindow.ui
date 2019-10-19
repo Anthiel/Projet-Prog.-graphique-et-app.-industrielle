@@ -127,6 +127,13 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QPushButton" name="pushButton_dihedral">
+            <property name="text">
+             <string>Angles dihèdres</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
