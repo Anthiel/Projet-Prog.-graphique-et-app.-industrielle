@@ -31,8 +31,8 @@ public:
     // TP1
     void displayMeshStats(MyMesh* _mesh);
     void verificationVoisins(MyMesh* _mesh);
-    void frequenceAires(MyMesh* _mesh);
-    void frequenceVoisinageSommets(MyMesh* _mesh);
+    std::vector<double> frequenceAires(MyMesh* _mesh);
+    std::vector<double> frequenceVoisinageSommets(MyMesh* _mesh);
 
     QVector<float> boiteEnglobante(MyMesh* _mesh);
     MyMesh::Point barycentreForme(MyMesh* _mesh);
@@ -61,6 +61,10 @@ private slots:
     void on_pushButton_dev_clicked();
 
     void on_pushButton_dihedral_clicked();
+
+    void on_pushButton_aire_clicked();
+
+    void on_pushButton_freq_valence_clicked();
 
 private:
 

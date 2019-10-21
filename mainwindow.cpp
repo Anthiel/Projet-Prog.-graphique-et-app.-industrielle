@@ -92,15 +92,18 @@ void MainWindow::verificationVoisins(MyMesh* _mesh)
     }
 
 }
-void MainWindow::frequenceAires(MyMesh* _mesh)
+
+std::vector <double> MainWindow::frequenceAires(MyMesh* _mesh)
 {
-    double maxA = Util::faceArea(&mesh, 0);
-    double minA = Util::faceArea(&mesh, 0);
+    double aireTot = 0;
+    double maxA = 0;
+    double minA = 0;
     double diff;
     std::vector <int> compt(10, 0);
     std::vector <double> ratio(10, 0);
 
     for(MyMesh::FaceIter curF = _mesh->faces_begin() ; curF != _mesh->faces_end() ; curF ++){
+        aireTot += Util::faceArea(&mesh, (*curF).idx());
         if (Util::faceArea(&mesh, (*curF).idx()) > maxA){
             maxA = Util::faceArea(&mesh, (*curF).idx());
         }
@@ -109,37 +112,41 @@ void MainWindow::frequenceAires(MyMesh* _mesh)
         }
     }
 
+    qDebug() << "aire tot = " << aireTot;
+
     diff = maxA-minA;
 
     for(MyMesh::FaceIter curF = _mesh->faces_begin() ; curF != _mesh->faces_end() ; curF ++){
-        if (Util::faceArea(&mesh, (*curF).idx()) > minA && Util::faceArea(&mesh, (*curF).idx()) <= minA+((10.0*diff)/100.0)){
+        double curr_aire = Util::faceArea(&mesh, (*curF).idx());
+
+        if (curr_aire >= minA && curr_aire <= minA+((10.0*diff)/100.0)){
             compt[0] ++;
         }
-        else if (Util::faceArea(&mesh, (*curF).idx()) > minA+((10.0*diff)/100.0) && Util::faceArea(&mesh, (*curF).idx()) <= minA+((20.0*diff)/100.0)){
+        else if (curr_aire > minA+((10.0*diff)/100.0) && curr_aire <= minA+((20.0*diff)/100.0)){
             compt[1] ++;
         }
-        else if (Util::faceArea(&mesh, (*curF).idx()) > minA+((20.0*diff)/100.0) && Util::faceArea(&mesh, (*curF).idx()) <= minA+((30.0*diff)/100.0)){
+        else if (curr_aire > minA+((20.0*diff)/100.0) && curr_aire <= minA+((30.0*diff)/100.0)){
             compt[2] ++;
         }
-        else if (Util::faceArea(&mesh, (*curF).idx()) > minA+((30.0*diff)/100.0) && Util::faceArea(&mesh, (*curF).idx()) <= minA+((40.0*diff)/100.0)){
+        else if (curr_aire > minA+((30.0*diff)/100.0) && curr_aire <= minA+((40.0*diff)/100.0)){
             compt[3] ++;
         }
-        else if (Util::faceArea(&mesh, (*curF).idx()) > minA+((40.0*diff)/100.0) && Util::faceArea(&mesh, (*curF).idx()) <= minA+((50.0*diff)/100.0)){
+        else if (curr_aire > minA+((40.0*diff)/100.0) && curr_aire <= minA+((50.0*diff)/100.0)){
             compt[4] ++;
         }
-        else if (Util::faceArea(&mesh, (*curF).idx()) > minA+((50.0*diff)/100.0) && Util::faceArea(&mesh, (*curF).idx()) <= minA+((60.0*diff)/100.0)){
+        else if (curr_aire > minA+((50.0*diff)/100.0) && curr_aire <= minA+((60.0*diff)/100.0)){
             compt[5] ++;
         }
-        else if (Util::faceArea(&mesh, (*curF).idx()) > minA+((60.0*diff)/100.0) && Util::faceArea(&mesh, (*curF).idx()) <= minA+((70.0*diff)/100.0)){
+        else if (curr_aire > minA+((60.0*diff)/100.0) && curr_aire <= minA+((70.0*diff)/100.0)){
             compt[6] ++;
         }
-        else if (Util::faceArea(&mesh, (*curF).idx()) > minA+((70.0*diff)/100.0) && Util::faceArea(&mesh, (*curF).idx()) <= minA+((80.0*diff)/100.0)){
+        else if (curr_aire > minA+((70.0*diff)/100.0) && curr_aire <= minA+((80.0*diff)/100.0)){
             compt[7] ++;
         }
-        else if (Util::faceArea(&mesh, (*curF).idx()) > minA+((80.0*diff)/100.0) && Util::faceArea(&mesh, (*curF).idx()) <= minA+((90.0*diff)/100.0)){
+        else if (curr_aire > minA+((80.0*diff)/100.0) && curr_aire <= minA+((90.0*diff)/100.0)){
             compt[8] ++;
         }
-        else if (Util::faceArea(&mesh, (*curF).idx()) > minA+((90.0*diff)/100.0) && Util::faceArea(&mesh, (*curF).idx()) <= maxA){
+        else if (curr_aire > minA+((90.0*diff)/100.0) && curr_aire <= maxA){
             compt[9] ++;
         }
     }
@@ -147,14 +154,19 @@ void MainWindow::frequenceAires(MyMesh* _mesh)
     std::ofstream outfile (filename + "Aires.csv");
 
     for (unsigned int i = 0; i < compt.size() ; i++){
-        ratio[i] = (1.0*compt[i])/(1.0*_mesh->n_faces())*100;
+        ratio[i] = ((double)compt[i])/((double)_mesh->n_faces())*100.0;
         outfile << i*10 << "-" << i*10+10 << "," << ratio[i] << std::endl;
-        //qDebug() << i*10 << "-" << i*10+10 << " aire : " << ratio[i] << "%";
+        qDebug() << i*10 << "-" << i*10+10 << " aire : " << ratio[i] << "%";
+        //std::cout << ratio[i];
     }
 
     outfile.close();
+
+    return ratio;
 }
-void MainWindow::frequenceVoisinageSommets(MyMesh* _mesh)
+
+
+std::vector<double> MainWindow::frequenceVoisinageSommets(MyMesh* _mesh)
 {
     unsigned int maxVal = _mesh->valence(_mesh->vertex_handle(0));
     unsigned int minVal = _mesh->valence(_mesh->vertex_handle(0));
@@ -168,8 +180,8 @@ void MainWindow::frequenceVoisinageSommets(MyMesh* _mesh)
         }
     }
 
-    std::vector <int> compt(maxVal-minVal, 0);
-    std::vector <double> ratio(maxVal-minVal, 0);
+    std::vector <int> compt(maxVal-minVal+1, 0);
+    std::vector <double> ratio(maxVal-minVal+1, 0);
 
     for (MyMesh::VertexIter curV = _mesh->vertices_begin() ; curV != _mesh->vertices_end() ; curV ++){
         compt[_mesh->valence((*curV))-minVal] ++;
@@ -178,12 +190,14 @@ void MainWindow::frequenceVoisinageSommets(MyMesh* _mesh)
     std::ofstream outfile (filename + "Valence.csv");
 
     for (unsigned int i = 0; i < compt.size() ; i++){
-        ratio[i] = (1.0*compt[i])/(1.0*_mesh->n_vertices())*100;
-        outfile << i*10 << "-" << i*10+10 << "," << ratio[i] << std::endl;
-        //qDebug() << i*10 << "-" << i*10+10 << " aire : " << ratio[i] << "%";
+        ratio[i] = ((double)compt[i])/((double)_mesh->n_vertices())*100.0;
+        outfile << " valence de " << minVal + i << " : " << ratio[i] << std::endl;
+        qDebug() << " valence de " << minVal + i << " : " << ratio[i] << "%";
     }
-
+    ratio.push_back(minVal);
     outfile.close();
+
+    return ratio;
 }
 
 // Calcul de la boîte englobante
@@ -735,8 +749,6 @@ void MainWindow::on_pushButton_chargement_clicked()
 
     this->displayMeshStats(&mesh);
     this->verificationVoisins(&mesh);
-    this->frequenceAires(&mesh);
-    this->frequenceVoisinageSommets(&mesh);
 }
 
 void MainWindow::on_pushButton_box_clicked()
@@ -757,6 +769,25 @@ void MainWindow::on_pushButton_bary_clicked()
     this->displayMesh(&mesh, true);
 }
 
+void MainWindow::on_pushButton_aire_clicked()
+{
+    std::vector<double> ratio = frequenceAires(&mesh);
+    QString text("Fréquences des aires : \n");
+    for(int i = 0; i < ratio.size(); i++){
+        text.append("Aire entre " + QString::number(i*10) + "% et " + QString::number(i*10+10) + "% : " + QString::number(ratio[i]) + "% \n");
+    }
+    QMessageBox::information(this, tr("Fréquence aires"), text);
+}
+
+void MainWindow::on_pushButton_freq_valence_clicked()
+{
+    std::vector<double> ratio = frequenceVoisinageSommets(&mesh);
+    QString text("Valences des sommets : \n");
+    for(int i = 0; i < ratio.size()-1; i++){
+        text.append("Valence de " + QString::number(ratio[ratio.size()-1] +i) + " : " + QString::number(ratio[i]) + "% \n");
+    }
+    QMessageBox::information(this, tr("Fréquence valences sommets"), text);
+}
 
 void MainWindow::on_vertexSelect_valueChanged(int arg1)
 {
@@ -787,3 +818,4 @@ void MainWindow::on_pushButton_dihedral_clicked()
 {
     anglesDihedres(&mesh);
 }
+
