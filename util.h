@@ -35,8 +35,7 @@ public:
     static double faceArea(MyMesh* _mesh, int faceID);
     static float angleFF(MyMesh *_mesh, int faceID0, int faceID1, int vertID0, int vertID1);
     static float angleEE(MyMesh* _mesh, int vertexID, int faceID);
-    static void H_Curv(MyMesh* _mesh);
-    static void K_Curv(MyMesh* _mesh);
+
     static int PointEnFace(MyMesh *_mesh, int vertexID, int faceID, int faceID2);
     static float AireBarycentrique(MyMesh* _mesh, int vertexID);
     static float AngleAbs(MyMesh* _mesh, int vertexID);

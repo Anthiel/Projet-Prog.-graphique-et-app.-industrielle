@@ -110,24 +110,7 @@ float Util::fctK(MyMesh* _mesh, int vertexID){
     float secondPart = 2*M_PI - AngleAbs(_mesh, vertexID);
     return firstPart * secondPart;
 }
-void Util::K_Curv(MyMesh* _mesh)
-{
-    for (MyMesh::VertexIter curVert = _mesh->vertices_begin(); curVert != _mesh->vertices_end(); curVert++)
-    {
-        VertexHandle vh = *curVert;
-        float value = fctK(_mesh, vh.idx());
-        _mesh->data(vh).value = value;
-    }
-}
-void Util::H_Curv(MyMesh* _mesh)
-{
-    for (MyMesh::VertexIter curVert = _mesh->vertices_begin(); curVert != _mesh->vertices_end(); curVert++)
-    {
-        VertexHandle vh = *curVert;
-        float value = fctH(_mesh, vh.idx());
-        _mesh->data(vh).value = value;
-    }
-}
+
 VectorT <float,3> Util::LongueurArc(MyMesh *_mesh, int vertexID, int vertexID2){
 
     VectorT <float,3> points[2];

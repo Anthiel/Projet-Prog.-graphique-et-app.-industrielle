@@ -164,8 +164,6 @@ std::vector <double> MainWindow::frequenceAires(MyMesh* _mesh)
 
     return ratio;
 }
-
-
 std::vector<double> MainWindow::frequenceVoisinageSommets(MyMesh* _mesh)
 {
     unsigned int maxVal = _mesh->valence(_mesh->vertex_handle(0));
@@ -318,13 +316,11 @@ void MainWindow::showSelection(MyMesh* _mesh){
         // on affiche le nouveau maillage
         displayMesh(_mesh);
 }
-
 void MainWindow::showFaceNormal(MyMesh* _mesh){
     FaceHandle currentFace = _mesh->face_handle(faceSelection);
     MyMesh::Normal normal = _mesh->calc_face_normal(currentFace);
     qDebug() << "x: " << normal[0] << " y: " << normal[1] << " z: " << normal[2];
 }
-
 void MainWindow::showVertexNormal(MyMesh* _mesh){
     VertexHandle currentVertex = _mesh->vertex_handle(vertexSelection);
     MyMesh::Normal normal = _mesh->calc_vertex_normal(currentVertex);
@@ -383,13 +379,13 @@ void MainWindow::anglesDihedres(MyMesh* _mesh){
         }
     }
 
-    for(int i = 0 ; i < angleCount.size() ; ++i){
+    for(unsigned int i = 0 ; i < angleCount.size() ; ++i){
         qDebug() << i << ": " << angleCount[i];
     }
 
     std::ofstream outfile (filename + "Angles.csv");
 
-    for(int i = 0 ; i < angleCount.size() ; ++i){
+    for(unsigned int i = 0 ; i < angleCount.size() ; ++i){
          outfile << i * 10 << "-" << (i + 1) * 10 << "," << angleCount[i] <<  std::endl;
     }
 
@@ -397,6 +393,24 @@ void MainWindow::anglesDihedres(MyMesh* _mesh){
 }
 // Calcul moyenne des normales aux faces concourantes
 
+void MainWindow::H_Curv(MyMesh* _mesh)
+{
+    for (MyMesh::VertexIter curVert = _mesh->vertices_begin(); curVert != _mesh->vertices_end(); curVert++)
+    {
+        VertexHandle vh = *curVert;
+        float value = Util::fctH(_mesh, vh.idx());
+        _mesh->data(vh).value = value;
+    }
+}
+void MainWindow::K_Curv(MyMesh* _mesh)
+{
+    for (MyMesh::VertexIter curVert = _mesh->vertices_begin(); curVert != _mesh->vertices_end(); curVert++)
+    {
+        VertexHandle vh = *curVert;
+        float value = Util::fctK(_mesh, vh.idx());
+        _mesh->data(vh).value = value;
+    }
+}
 
 /***************************** UTILS *******************************/
 
@@ -732,13 +746,12 @@ void MainWindow::on_pushButton_chargement_clicked()
 {
     // fenêtre de sélection des fichiers
     QString fileName = QFileDialog::getOpenFileName(this, tr("Open Mesh"), "", tr("Mesh Files (*.obj)"));
-
+    if(fileName.isEmpty()) return;
     // chargement du fichier .obj dans la variable globale "mesh"
     OpenMesh::IO::read_mesh(mesh, fileName.toUtf8().constData());
     filename = fileName.toUtf8().constData();
 
-    mesh.request_vertex_normals();
-    mesh.request_face_normals();
+
     mesh.update_normals();
 
     // initialisation des couleurs et épaisseurs (sommets et arêtes) du mesh
@@ -746,9 +759,6 @@ void MainWindow::on_pushButton_chargement_clicked()
 
     // on affiche le maillage
     this->displayMesh(&mesh);
-
-    this->displayMeshStats(&mesh);
-    this->verificationVoisins(&mesh);
 }
 
 void MainWindow::on_pushButton_box_clicked()
@@ -773,7 +783,7 @@ void MainWindow::on_pushButton_aire_clicked()
 {
     std::vector<double> ratio = frequenceAires(&mesh);
     QString text("Fréquences des aires : \n");
-    for(int i = 0; i < ratio.size(); i++){
+    for(unsigned int i = 0; i < ratio.size(); i++){
         text.append("Aire entre " + QString::number(i*10) + "% et " + QString::number(i*10+10) + "% : " + QString::number(ratio[i]) + "% \n");
     }
     QMessageBox::information(this, tr("Fréquence aires"), text);
@@ -783,7 +793,7 @@ void MainWindow::on_pushButton_freq_valence_clicked()
 {
     std::vector<double> ratio = frequenceVoisinageSommets(&mesh);
     QString text("Valences des sommets : \n");
-    for(int i = 0; i < ratio.size()-1; i++){
+    for(unsigned int i = 0; i < ratio.size()-1; i++){
         text.append("Valence de " + QString::number(ratio[ratio.size()-1] +i) + " : " + QString::number(ratio[i]) + "% \n");
     }
     QMessageBox::information(this, tr("Fréquence valences sommets"), text);
@@ -819,3 +829,14 @@ void MainWindow::on_pushButton_dihedral_clicked()
     anglesDihedres(&mesh);
 }
 
+void MainWindow::on_pushButton_h_clicked()
+{
+    H_Curv(&mesh);
+    displayMesh(&mesh, true);
+}
+
+void MainWindow::on_pushButton_k_clicked()
+{
+    K_Curv(&mesh);
+    displayMesh(&mesh, true);
+}

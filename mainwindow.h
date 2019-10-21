@@ -42,6 +42,9 @@ public:
     void deviationNormales(MyMesh* _mesh);
     void anglesDihedres(MyMesh* _mesh);
 
+    void H_Curv(MyMesh* _mesh);
+    void K_Curv(MyMesh* _mesh);
+
     void displayMesh(MyMesh *_mesh, bool isTemperatureMap = false, float mapRange = -1);
     void resetAllColorsAndThickness(MyMesh* _mesh);
 
@@ -65,6 +68,10 @@ private slots:
     void on_pushButton_aire_clicked();
 
     void on_pushButton_freq_valence_clicked();
+
+    void on_pushButton_h_clicked();
+
+    void on_pushButton_k_clicked();
 
 private:
 
