@@ -751,7 +751,8 @@ void MainWindow::on_pushButton_chargement_clicked()
     OpenMesh::IO::read_mesh(mesh, fileName.toUtf8().constData());
     filename = fileName.toUtf8().constData();
 
-
+    mesh.request_vertex_normals();
+    mesh.request_face_normals();
     mesh.update_normals();
 
     // initialisation des couleurs et épaisseurs (sommets et arêtes) du mesh
@@ -759,6 +760,9 @@ void MainWindow::on_pushButton_chargement_clicked()
 
     // on affiche le maillage
     this->displayMesh(&mesh);
+
+    this->displayMeshStats(&mesh);
+    this->verificationVoisins(&mesh);
 }
 
 void MainWindow::on_pushButton_box_clicked()
