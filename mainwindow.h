@@ -8,8 +8,6 @@
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 #include<string>
 
-#include "util.h"
-
 namespace Ui {
 class MainWindow;
 }
@@ -42,6 +40,11 @@ public:
     void deviationNormales(MyMesh* _mesh);
     void anglesDihedres(MyMesh* _mesh);
 
+
+    float faceArea(MyMesh* _mesh, int faceID);
+    float baryArea(MyMesh* _mesh, int vertID);
+    float angleFF(MyMesh *_mesh, int faceID0, int faceID1, int vertID0, int vertID1);
+    float angleEE(MyMesh* _mesh, int vertexID, int faceID);
     void H_Curv(MyMesh* _mesh);
     void K_Curv(MyMesh* _mesh);
 

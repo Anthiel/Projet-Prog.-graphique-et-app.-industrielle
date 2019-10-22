@@ -393,7 +393,7 @@ void MainWindow::anglesDihedres(MyMesh* _mesh){
 }
 // Calcul moyenne des normales aux faces concourantes
 
-void MainWindow::H_Curv(MyMesh* _mesh)
+/*void MainWindow::H_Curv(MyMesh* _mesh)
 {
     for (MyMesh::VertexIter curVert = _mesh->vertices_begin(); curVert != _mesh->vertices_end(); curVert++)
     {
@@ -409,6 +409,165 @@ void MainWindow::K_Curv(MyMesh* _mesh)
         VertexHandle vh = *curVert;
         float value = Util::fctK(_mesh, vh.idx());
         _mesh->data(vh).value = value;
+    }
+}*/
+
+float MainWindow::faceArea(MyMesh* _mesh, int faceID)
+{
+    FaceHandle fh = _mesh->face_handle ( faceID );
+
+    std::vector<VertexHandle> vertexes;
+
+    // On récupère les 3 sommets de la face
+    MyMesh::FaceVertexIter fh_v = _mesh->fv_iter(fh);
+    for(; fh_v.is_valid(); ++fh_v)
+        vertexes.push_back ( *fh_v );
+
+    // On créé deux vecteurs avec le même point de départ
+    OpenMesh::Vec3f vectorAB = _mesh->point(vertexes[1]) - _mesh->point(vertexes[0]);
+    OpenMesh::Vec3f vectorAC = _mesh->point(vertexes[2]) - _mesh->point(vertexes[0]);
+
+    // On calcule le produit vectoriel de ses deux vecteurs et retourne sa norme divisée par 2
+    OpenMesh::Vec3f product = vectorAB % vectorAC;
+    float norm = product.norm();
+
+    return norm / 2.0f;
+}
+
+// Calcule de l'aire barycentrique sous un sommet
+float MainWindow::baryArea(MyMesh* _mesh, int vertID){
+    float baryArea = 0;
+
+    VertexHandle vh = _mesh->vertex_handle ( vertID );
+
+    // On somme toutes les aires des faces voisines au sommet
+    MyMesh::VertexFaceIter vf = _mesh->vf_iter ( vh );
+    for ( ; vf.is_valid ( ) ; ++vf ) {
+        FaceHandle current = *vf;
+        baryArea += faceArea ( _mesh , current.idx( ) );
+    }
+
+    // On retourne cette somme divisée par 3
+    return baryArea / 3.0f;
+}
+
+// Calcul de l'angle entre deux faces
+float MainWindow::angleFF(MyMesh* _mesh, int faceID0,  int faceID1, int vertID0, int vertID1)
+{
+    int sign = 0;
+
+    VertexHandle vh0 = _mesh->vertex_handle ( vertID0 );
+    FaceHandle fh0 = _mesh->face_handle ( faceID0 );
+
+
+    // On créé un itérateur clockwise sur les sommets de la face d'handle faceID0
+    // et on tourne jusqu'à arriver sur le sommet d'handle vertID0
+    MyMesh::FaceVertexCWIter fh_cwv = _mesh->fv_cwiter ( fh0 );
+    while ( fh_cwv.is_valid ( ) && *fh_cwv != vh0 ) ++fh_cwv;
+
+    VertexHandle next = *++fh_cwv;
+
+    // Si le suivant du sommet d'handle vertID0 sur la face d'id faceID0 est le sommet
+    // d'handle vertID1, on est dans le sens négatif des faces, le signe de l'angle
+    // est négatif. Sinon, il est positif.
+    if ( next.idx ( ) == vertID1 ) sign = -1;
+    else sign = 1;
+
+    // On récupère les normales, calcule leur produit scalaire et on renvoie l'angle
+    // signé avec le produit scalaire et le signe trouvé plus tot
+    OpenMesh::Vec3f normal0 (_mesh->normal ( fh0 ) );
+    OpenMesh::Vec3f normal1 (_mesh->normal ( _mesh->face_handle ( faceID1 ) ) );
+    float scalar = normal0 | normal1;
+
+    return sign * acos ( scalar );
+}
+
+float MainWindow::angleEE(MyMesh* _mesh, int vertexID,  int faceID)
+{
+    FaceHandle fh = _mesh->face_handle ( faceID );
+    VertexHandle vh = _mesh->vertex_handle ( vertexID );
+    std::vector<VertexHandle> vertexes;
+
+    // On récupère les sommets de la faces qui ne sont pas le sommet d'ID vertexID
+    MyMesh::FaceVertexIter fh_v = _mesh->fv_iter(fh);
+    for(; fh_v.is_valid(); ++fh_v) {
+        VertexHandle current = *fh_v;
+        if( current.idx() != vertexID )
+            vertexes.push_back ( current );
+    }
+
+    // On retourne l'angle calculé depuis le produit scalaire
+    OpenMesh::Vec3f vectorAB = _mesh->point(vertexes[0]) - _mesh->point(vh);
+    OpenMesh::Vec3f vectorAC = _mesh->point(vertexes[1]) - _mesh->point(vh);
+    return acos ( vectorAB.normalize() | vectorAC.normalize() );
+}
+
+void MainWindow::H_Curv(MyMesh* _mesh)
+{
+    for (MyMesh::VertexIter curVert = _mesh->vertices_begin(); curVert != _mesh->vertices_end(); curVert++) {
+        MyMesh::VertexHandle current = *curVert;
+        float val = 0.0f;
+
+        for (MyMesh::VertexEdgeIter currentEdge = _mesh->ve_iter ( current ); currentEdge.is_valid(); currentEdge++)
+        {
+            MyMesh::EdgeHandle eh = *currentEdge;
+            MyMesh::HalfedgeHandle heh0 = _mesh->halfedge_handle(eh, 0);
+            MyMesh::HalfedgeHandle heh1 = _mesh->halfedge_handle(eh, 1);
+
+            FaceHandle fh0 = _mesh->face_handle(heh0);
+            FaceHandle fh1 = _mesh->face_handle(heh1);
+
+            // Si l'arête est en bordure, on ne traite qu'une face
+            if ( fh1.idx ( ) > _mesh->n_faces ( ) )
+                fh1 = fh0;
+
+            // On détermine le sommet opposé au sommet courant sur l'arête courante
+            int vertex2ID = _mesh->to_vertex_handle(heh1).idx();
+            if (vertex2ID == current.idx ( ) )
+                vertex2ID = _mesh->to_vertex_handle(heh0).idx();
+
+            // Vecteur entre le sommet courant et son opposé sur l'arête courante
+            OpenMesh::Vec3f currentOppVector = _mesh->point ( _mesh->vertex_handle ( vertex2ID ) ) - _mesh->point ( current );
+
+            OpenMesh::Vec3f normal0 ( _mesh->normal ( fh0 ) );
+            OpenMesh::Vec3f normal1 ( _mesh->normal ( fh1 ) );
+
+            // On ordonne les faces
+            if ( ( ( normal0 % normal1 ) | currentOppVector ) < 0 )
+            {
+                FaceHandle tempF = fh0;
+                fh0 = fh1;
+                fh1 = tempF;
+            }
+
+            // On somme les valeurs des angles entre les faces * le vecteur entre le sommet et son opposé
+            val += currentOppVector.norm ( ) * angleFF ( _mesh , fh0.idx ( ) , fh1.idx ( ) , current.idx() , vertex2ID );
+        }
+
+        // On calcule le résultat sur le sommet et on le lui attribue dans les propriétés du maillage
+        val /= ( 4 * baryArea ( _mesh , current.idx ( ) ) );
+        _mesh->data ( current ).value = val;
+    }
+}
+
+void MainWindow::K_Curv(MyMesh* _mesh)
+{
+    for ( MyMesh::VertexIter curVert = _mesh->vertices_begin() ; curVert!=_mesh->vertices_end() ; ++curVert ) {
+        VertexHandle current = *curVert;
+
+        // On calcule l'angle barycentrique sous le sommet courant
+        float area = baryArea ( _mesh , current.idx() );
+        float angleEESum = 0;
+
+        //On itère les faces autour du sommet courant et somme les angles entre leurs arêtes
+        MyMesh::VertexFaceIter vf = _mesh->vf_iter ( current );
+        for ( ; vf.is_valid ( ) ; ++vf ) {
+            FaceHandle currentFace = *vf;
+            angleEESum += angleEE ( _mesh , current.idx ( ) , currentFace.idx ( ) );
+        }
+
+        // On calcule le résultat sur le sommet et on le lui attribue dans les propriétés du maillage
+        _mesh->data ( current ).value = ( 1 / area ) * ( 2 * M_PI - angleEESum );
     }
 }
 
