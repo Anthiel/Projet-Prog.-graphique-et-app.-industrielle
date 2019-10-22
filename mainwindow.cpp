@@ -103,12 +103,12 @@ std::vector <double> MainWindow::frequenceAires(MyMesh* _mesh)
     std::vector <double> ratio(10, 0);
 
     for(MyMesh::FaceIter curF = _mesh->faces_begin() ; curF != _mesh->faces_end() ; curF ++){
-        aireTot += Util::faceArea(&mesh, (*curF).idx());
-        if (Util::faceArea(&mesh, (*curF).idx()) > maxA){
-            maxA = Util::faceArea(&mesh, (*curF).idx());
+        aireTot += faceArea(&mesh, (*curF).idx());
+        if (faceArea(&mesh, (*curF).idx()) > maxA){
+            maxA = faceArea(&mesh, (*curF).idx());
         }
-        else if (Util::faceArea(&mesh, (*curF).idx()) < minA){
-            minA = Util::faceArea(&mesh, (*curF).idx());
+        else if (faceArea(&mesh, (*curF).idx()) < minA){
+            minA = faceArea(&mesh, (*curF).idx());
         }
     }
 
@@ -117,7 +117,7 @@ std::vector <double> MainWindow::frequenceAires(MyMesh* _mesh)
     diff = maxA-minA;
 
     for(MyMesh::FaceIter curF = _mesh->faces_begin() ; curF != _mesh->faces_end() ; curF ++){
-        double curr_aire = Util::faceArea(&mesh, (*curF).idx());
+        double curr_aire = faceArea(&mesh, (*curF).idx());
 
         if (curr_aire >= minA && curr_aire <= minA+((10.0*diff)/100.0)){
             compt[0] ++;
@@ -393,24 +393,6 @@ void MainWindow::anglesDihedres(MyMesh* _mesh){
 }
 // Calcul moyenne des normales aux faces concourantes
 
-/*void MainWindow::H_Curv(MyMesh* _mesh)
-{
-    for (MyMesh::VertexIter curVert = _mesh->vertices_begin(); curVert != _mesh->vertices_end(); curVert++)
-    {
-        VertexHandle vh = *curVert;
-        float value = Util::fctH(_mesh, vh.idx());
-        _mesh->data(vh).value = value;
-    }
-}
-void MainWindow::K_Curv(MyMesh* _mesh)
-{
-    for (MyMesh::VertexIter curVert = _mesh->vertices_begin(); curVert != _mesh->vertices_end(); curVert++)
-    {
-        VertexHandle vh = *curVert;
-        float value = Util::fctK(_mesh, vh.idx());
-        _mesh->data(vh).value = value;
-    }
-}*/
 
 float MainWindow::faceArea(MyMesh* _mesh, int faceID)
 {

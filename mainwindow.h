@@ -15,6 +15,21 @@ class MainWindow;
 using namespace OpenMesh;
 using namespace OpenMesh::Attributes;
 
+struct MyTraits : public OpenMesh::DefaultTraits
+{
+    // use vertex normals and vertex colors
+    VertexAttributes( OpenMesh::Attributes::Normal | OpenMesh::Attributes::Color );
+    // store the previous halfedge
+    HalfedgeAttributes( OpenMesh::Attributes::PrevHalfedge );
+    // use face normals face colors
+    FaceAttributes( OpenMesh::Attributes::Normal | OpenMesh::Attributes::Color );
+    EdgeAttributes( OpenMesh::Attributes::Color );
+    // vertex thickness
+    VertexTraits{float thickness; float value;};
+    // edge thickness
+    EdgeTraits{float thickness;};
+};
+
 typedef OpenMesh::TriMesh_ArrayKernelT<MyTraits> MyMesh;
 
 class MainWindow : public QMainWindow
