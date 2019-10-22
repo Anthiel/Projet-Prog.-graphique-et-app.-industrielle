@@ -42,8 +42,8 @@ public:
     ~MainWindow();
 
     // TP1
-    void displayMeshStats(MyMesh* _mesh);
-    void verificationVoisins(MyMesh* _mesh);
+    QVector<int> displayMeshStats(MyMesh* _mesh);
+    QVector<std::vector<int>> verificationVoisins(MyMesh* _mesh);
     std::vector<double> frequenceAires(MyMesh* _mesh);
     std::vector<double> frequenceVoisinageSommets(MyMesh* _mesh);
 
@@ -53,7 +53,7 @@ public:
     void showFaceNormal(MyMesh* _mesh);
     void showVertexNormal(MyMesh* _mesh);
     void deviationNormales(MyMesh* _mesh);
-    void anglesDihedres(MyMesh* _mesh);
+    std::vector<int> anglesDihedres(MyMesh* _mesh);
 
 
     float faceArea(MyMesh* _mesh, int faceID);
@@ -91,12 +91,36 @@ private slots:
 
     void on_pushButton_k_clicked();
 
+    void on_actionCharger_OBJ_triggered();
+
+    void on_actionCourbure_Moyenne_triggered();
+
+    void on_actionCourbure_Gaussienne_triggered();
+
+    void on_actionD_viation_angles_triggered();
+
+    void on_actionBoite_englobante_triggered();
+
+    void on_actionBarycentre_de_la_forme_triggered();
+
+    void on_actionAngles_di_dres_triggered();
+
+    void on_actionFr_quences_des_aires_triggered();
+
+    void on_actionFr_quences_valences_triggered();
+
+    void on_actionV_rification_voisins_triggered();
+
+    void on_actionCommandes_triggered();
+
 private:
 
     bool modevoisinage;
 
     MyMesh mesh;
     std::string filename;
+
+    QLabel *footerLabel;
 
     int vertexSelection;
     int edgeSelection;

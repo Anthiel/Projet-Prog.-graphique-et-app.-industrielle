@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>632</width>
-    <height>475</height>
+    <height>554</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -101,6 +101,20 @@
         </layout>
        </item>
        <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_5">
+         <item>
+          <widget class="QPlainTextEdit" name="plainTextEdit">
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>80</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
         <widget class="QGroupBox" name="groupBox">
          <property name="title">
           <string>TP1</string>
@@ -188,9 +202,44 @@
      <x>0</x>
      <y>0</y>
      <width>632</width>
-     <height>22</height>
+     <height>23</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuFichir">
+    <property name="title">
+     <string>Fic&amp;hier</string>
+    </property>
+    <addaction name="actionCharger_OBJ"/>
+   </widget>
+   <widget class="QMenu" name="menuEdition">
+    <property name="title">
+     <string>Edition</string>
+    </property>
+    <addaction name="actionCourbure_Moyenne"/>
+    <addaction name="actionCourbure_Gaussienne"/>
+    <addaction name="actionD_viation_angles"/>
+   </widget>
+   <widget class="QMenu" name="menuInfos">
+    <property name="title">
+     <string>Infos</string>
+    </property>
+    <addaction name="actionBoite_englobante"/>
+    <addaction name="actionBarycentre_de_la_forme"/>
+    <addaction name="actionAngles_di_dres"/>
+    <addaction name="actionFr_quences_des_aires"/>
+    <addaction name="actionFr_quences_valences"/>
+    <addaction name="actionV_rification_voisins"/>
+   </widget>
+   <widget class="QMenu" name="menuCommande">
+    <property name="title">
+     <string>Aide</string>
+    </property>
+    <addaction name="actionCommandes"/>
+   </widget>
+   <addaction name="menuFichir"/>
+   <addaction name="menuEdition"/>
+   <addaction name="menuInfos"/>
+   <addaction name="menuCommande"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">
@@ -201,6 +250,61 @@
    </attribute>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
+  <action name="actionCharger_OBJ">
+   <property name="text">
+    <string>Charger OBJ</string>
+   </property>
+  </action>
+  <action name="actionCourbure_Moyenne">
+   <property name="text">
+    <string>Courbure Moyenne</string>
+   </property>
+  </action>
+  <action name="actionCourbure_Gaussienne">
+   <property name="text">
+    <string>Courbure Gaussienne</string>
+   </property>
+  </action>
+  <action name="actionD_viation_angles">
+   <property name="text">
+    <string>Déviation angles</string>
+   </property>
+  </action>
+  <action name="actionBoite_englobante">
+   <property name="text">
+    <string>Boite englobante</string>
+   </property>
+  </action>
+  <action name="actionBarycentre_de_la_forme">
+   <property name="text">
+    <string>Barycentre de la forme</string>
+   </property>
+  </action>
+  <action name="actionAngles_di_dres">
+   <property name="text">
+    <string>Angles dièdres</string>
+   </property>
+  </action>
+  <action name="actionFr_quences_des_aires">
+   <property name="text">
+    <string>Fréquences des aires</string>
+   </property>
+  </action>
+  <action name="actionFr_quences_valences">
+   <property name="text">
+    <string>Fréquences valences sommets</string>
+   </property>
+  </action>
+  <action name="actionV_rification_voisins">
+   <property name="text">
+    <string>Vérification voisins</string>
+   </property>
+  </action>
+  <action name="actionCommandes">
+   <property name="text">
+    <string>Commandes</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>

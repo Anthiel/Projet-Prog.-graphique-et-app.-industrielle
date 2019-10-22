@@ -16,6 +16,16 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     ui->setupUi(this);
     this->setWindowTitle("M2GIG - Projet PGAI");
+
+    footerLabel = new QLabel;
+    statusBar()->addWidget(footerLabel);
+
+    ui->menuEdition->setEnabled(false);
+    ui->menuInfos->setEnabled(false);
+    ui->groupBox->setEnabled(false);
+    ui->vertexSelect->setEnabled(false);
+    ui->edgeSelect->setEnabled(false);
+    ui->faceSelect->setEnabled(false);
 }
 MainWindow::~MainWindow()
 {
@@ -25,12 +35,15 @@ MainWindow::~MainWindow()
 /***************************** TP1 *******************************/
 
 // Affichage du nombre de sommets et de faces
-void MainWindow::displayMeshStats(MyMesh* _mesh)
+QVector<int> MainWindow::displayMeshStats(MyMesh* _mesh)
 {
-    qDebug() << "Ce maillage possède" << _mesh->n_vertices() << "sommets,"<< _mesh->n_faces() << "faces";
+    QVector<int> nb_elements = {_mesh->n_vertices(), _mesh->n_faces()};
+    return nb_elements;
 }
-void MainWindow::verificationVoisins(MyMesh* _mesh)
+
+QVector<std::vector<int>> MainWindow::verificationVoisins(MyMesh* _mesh)
 {
+    QVector<std::vector<int>> list_sans_voisins = {{}, {}, {}};
     std::vector<int> faces_sans_voisin;
     std::vector<int> points_sans_arrete;
     std::vector<int> arrete_sans_face;
@@ -41,11 +54,8 @@ void MainWindow::verificationVoisins(MyMesh* _mesh)
             faces_sans_voisin.push_back(facf.idx());
          }
     }
-    if (faces_sans_voisin.size() == 0){
-        qDebug() << "toutes les faces ont au moins un voisin";
-    }
-    else {
-        qDebug() << "Les faces sans faces voisines sont : " << faces_sans_voisin;
+    if (faces_sans_voisin.size() != 0){
+        list_sans_voisins[0] = faces_sans_voisin;
     }
 
     for(MyMesh::VertexIter curV = _mesh->vertices_begin() ; curV != _mesh->vertices_end() ; curV ++){
@@ -58,11 +68,8 @@ void MainWindow::verificationVoisins(MyMesh* _mesh)
             points_sans_arrete.push_back(verV.idx());
         }
     }
-    if (points_sans_arrete.size() == 0){
-        qDebug() << "tous les points ont au moins une arrete";
-    }
-    else {
-        qDebug() << "Les points sans arrêtes adjacentes sont : " << points_sans_arrete;
+    if (points_sans_arrete.size() != 0){
+        list_sans_voisins[1] = points_sans_arrete;
     }
 
     for(MyMesh::EdgeIter curE = _mesh->edges_begin() ; curE != _mesh->edges_end() ; curE ++){
@@ -84,13 +91,10 @@ void MainWindow::verificationVoisins(MyMesh* _mesh)
             arrete_sans_face.push_back(edgE.idx());
         }
     }
-    if (arrete_sans_face.size() == 0){
-        qDebug() << "toutes les arretes appartiennent à au moins une face";
+    if (arrete_sans_face.size() != 0){
+        list_sans_voisins[2] = arrete_sans_face;
     }
-    else {
-        qDebug() << "Les arrêtes sans faces adjacentes sont : " << arrete_sans_face;
-    }
-
+    return list_sans_voisins;
 }
 
 std::vector <double> MainWindow::frequenceAires(MyMesh* _mesh)
@@ -111,8 +115,6 @@ std::vector <double> MainWindow::frequenceAires(MyMesh* _mesh)
             minA = faceArea(&mesh, (*curF).idx());
         }
     }
-
-    qDebug() << "aire tot = " << aireTot;
 
     diff = maxA-minA;
 
@@ -156,14 +158,15 @@ std::vector <double> MainWindow::frequenceAires(MyMesh* _mesh)
     for (unsigned int i = 0; i < compt.size() ; i++){
         ratio[i] = ((double)compt[i])/((double)_mesh->n_faces())*100.0;
         outfile << i*10 << "-" << i*10+10 << "," << ratio[i] << std::endl;
-        qDebug() << i*10 << "-" << i*10+10 << " aire : " << ratio[i] << "%";
-        //std::cout << ratio[i];
     }
 
     outfile.close();
 
+    ratio.push_back(aireTot);
+
     return ratio;
 }
+
 std::vector<double> MainWindow::frequenceVoisinageSommets(MyMesh* _mesh)
 {
     unsigned int maxVal = _mesh->valence(_mesh->vertex_handle(0));
@@ -190,7 +193,6 @@ std::vector<double> MainWindow::frequenceVoisinageSommets(MyMesh* _mesh)
     for (unsigned int i = 0; i < compt.size() ; i++){
         ratio[i] = ((double)compt[i])/((double)_mesh->n_vertices())*100.0;
         outfile << " valence de " << minVal + i << " : " << ratio[i] << std::endl;
-        qDebug() << " valence de " << minVal + i << " : " << ratio[i] << "%";
     }
     ratio.push_back(minVal);
     outfile.close();
@@ -316,6 +318,7 @@ void MainWindow::showSelection(MyMesh* _mesh){
         // on affiche le nouveau maillage
         displayMesh(_mesh);
 }
+
 void MainWindow::showFaceNormal(MyMesh* _mesh){
     FaceHandle currentFace = _mesh->face_handle(faceSelection);
     MyMesh::Normal normal = _mesh->calc_face_normal(currentFace);
@@ -352,7 +355,7 @@ void MainWindow::deviationNormales(MyMesh* _mesh){
     displayMesh(_mesh);
 }
 
-void MainWindow::anglesDihedres(MyMesh* _mesh){
+std::vector<int> MainWindow::anglesDihedres(MyMesh* _mesh){
     std::vector<int> angleCount(36);
     for (MyMesh::EdgeIter curEdge = _mesh->edges_begin(); curEdge != _mesh->edges_end(); curEdge++){
         EdgeHandle current = *curEdge;
@@ -390,6 +393,8 @@ void MainWindow::anglesDihedres(MyMesh* _mesh){
     }
 
     outfile.close();
+
+    return angleCount;
 }
 // Calcul moyenne des normales aux faces concourantes
 
@@ -904,6 +909,16 @@ void MainWindow::on_pushButton_chargement_clicked()
 
     this->displayMeshStats(&mesh);
     this->verificationVoisins(&mesh);
+
+    QString nb_elements = QString::number(displayMeshStats(&mesh)[0]) + " sommets, " + QString::number(displayMeshStats(&mesh)[1]) + " faces";
+    footerLabel->setText(nb_elements);
+
+    ui->menuEdition->setEnabled(true);
+    ui->menuInfos->setEnabled(true);
+    ui->groupBox->setEnabled(true);
+    ui->vertexSelect->setEnabled(true);
+    ui->edgeSelect->setEnabled(true);
+    ui->faceSelect->setEnabled(true);
 }
 
 void MainWindow::on_pushButton_box_clicked()
@@ -915,6 +930,7 @@ void MainWindow::on_pushButton_box_clicked()
     }
     QMessageBox::information(this, tr("Boîte englobante"), text);
 }
+
 void MainWindow::on_pushButton_bary_clicked()
 {
     MyMesh::Point point = barycentreForme(&mesh);
@@ -928,10 +944,12 @@ void MainWindow::on_pushButton_aire_clicked()
 {
     std::vector<double> ratio = frequenceAires(&mesh);
     QString text("Fréquences des aires : \n");
-    for(unsigned int i = 0; i < ratio.size(); i++){
+    for(unsigned int i = 0; i < ratio.size()-1; i++){
         text.append("Aire entre " + QString::number(i*10) + "% et " + QString::number(i*10+10) + "% : " + QString::number(ratio[i]) + "% \n");
     }
     QMessageBox::information(this, tr("Fréquence aires"), text);
+
+    ui->plainTextEdit->setPlainText("Aire totale du maillage = " + QString::number(ratio[ratio.size()-1]));
 }
 
 void MainWindow::on_pushButton_freq_valence_clicked()
@@ -971,7 +989,12 @@ void MainWindow::on_pushButton_dev_clicked()
 
 void MainWindow::on_pushButton_dihedral_clicked()
 {
-    anglesDihedres(&mesh);
+    std::vector<int> list_angle = anglesDihedres(&mesh);
+    QString text("Angles dièdres : \n");
+    for(int i = 0; i < list_angle.size(); i++){
+        text.append(QString::number(i) + " : " + QString::number(list_angle[i]) + "\n");
+    }
+    QMessageBox::information(this, tr("Angles dièdres"), text);
 }
 
 void MainWindow::on_pushButton_h_clicked()
@@ -984,4 +1007,155 @@ void MainWindow::on_pushButton_k_clicked()
 {
     K_Curv(&mesh);
     displayMesh(&mesh, true);
+}
+
+
+void MainWindow::on_actionCharger_OBJ_triggered()
+{
+    // fenêtre de sélection des fichiers
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open Mesh"), "", tr("Mesh Files (*.obj)"));
+
+    // chargement du fichier .obj dans la variable globale "mesh"
+    OpenMesh::IO::read_mesh(mesh, fileName.toUtf8().constData());
+    filename = fileName.toUtf8().constData();
+
+    mesh.request_vertex_normals();
+    mesh.request_face_normals();
+    mesh.update_normals();
+
+    // initialisation des couleurs et épaisseurs (sommets et arêtes) du mesh
+    this->resetAllColorsAndThickness(&mesh);
+
+    // on affiche le maillage
+    this->displayMesh(&mesh);
+
+    this->displayMeshStats(&mesh);
+
+    QString nb_elements = QString::number(displayMeshStats(&mesh)[0]) + " sommets, " + QString::number(displayMeshStats(&mesh)[1]) + " faces";
+    footerLabel->setText(nb_elements);
+
+    ui->menuEdition->setEnabled(true);
+    ui->menuInfos->setEnabled(true);
+    ui->groupBox->setEnabled(true);
+    ui->vertexSelect->setEnabled(true);
+    ui->edgeSelect->setEnabled(true);
+    ui->faceSelect->setEnabled(true);
+}
+
+void MainWindow::on_actionCourbure_Moyenne_triggered()
+{
+    H_Curv(&mesh);
+    displayMesh(&mesh, true);
+}
+
+void MainWindow::on_actionCourbure_Gaussienne_triggered()
+{
+    K_Curv(&mesh);
+    displayMesh(&mesh, true);
+}
+
+void MainWindow::on_actionD_viation_angles_triggered()
+{
+    deviationNormales(&mesh);
+}
+
+
+
+void MainWindow::on_actionBoite_englobante_triggered()
+{
+    QVector<float> result = boiteEnglobante(&mesh);
+    QString text("Boîte englobante: ");
+    for(int i = 0; i < result.size(); i++){
+        text.append(QString::number(result[i]) + " ");
+    }
+    QMessageBox::information(this, tr("Boîte englobante"), text);
+}
+
+void MainWindow::on_actionBarycentre_de_la_forme_triggered()
+{
+    MyMesh::Point point = barycentreForme(&mesh);
+    QMessageBox::information(this,
+                             tr("Barycentre"),
+                             QString("Le barycentre est de coordonnées (" + QString::number(point[0]) + ", " + QString::number(point[1]) + ", " + QString::number(point[2]) + ")"));
+    this->displayMesh(&mesh, true);
+}
+
+
+void MainWindow::on_actionAngles_di_dres_triggered()
+{
+    std::vector<int> list_angle = anglesDihedres(&mesh);
+    QString text("Angles dièdres : \n");
+    for(int i = 0; i < list_angle.size(); i++){
+        text.append(QString::number(i) + " : " + QString::number(list_angle[i]) + "\n");
+    }
+    QMessageBox::information(this, tr("Angles dièdres"), text);
+}
+
+
+void MainWindow::on_actionFr_quences_des_aires_triggered()
+{
+    std::vector<double> ratio = frequenceAires(&mesh);
+    QString text("Fréquences des aires : \n");
+    for(unsigned int i = 0; i < ratio.size()-1; i++){
+        text.append("Aire entre " + QString::number(i*10) + "% et " + QString::number(i*10+10) + "% : " + QString::number(ratio[i]) + "% \n");
+    }
+    QMessageBox::information(this, tr("Fréquence aires"), text);
+
+    ui->plainTextEdit->setPlainText("Aire totale du maillage = " + QString::number(ratio[ratio.size()-1]));
+}
+
+void MainWindow::on_actionFr_quences_valences_triggered()
+{
+    std::vector<double> ratio = frequenceVoisinageSommets(&mesh);
+    QString text("Valences des sommets : \n");
+    for(unsigned int i = 0; i < ratio.size()-1; i++){
+        text.append("Valence de " + QString::number(ratio[ratio.size()-1] +i) + " : " + QString::number(ratio[i]) + "% \n");
+    }
+    QMessageBox::information(this, tr("Fréquence valences sommets"), text);
+}
+
+void MainWindow::on_actionV_rification_voisins_triggered()
+{
+    QVector<std::vector<int>> list = verificationVoisins(&mesh);
+
+    QString text("Vérification voisinnage éléments : \n");
+
+    if(list[0].size() == 0){
+        text += "Toutes les faces ont au moins un voisin \n \n";
+    }
+    else{
+        for(int i = 0; i<list[0].size(); i++){
+            text += QString(list[0][i]);
+        };
+        text += "\n \n";
+    }
+    if(list[1].size() == 0){
+        text += "Tous les points ont au moins une arête \n \n";
+    }
+    else{
+        for(int i = 0; i<list[1].size(); i++){
+            text += QString(list[1][i]);
+        };
+        text += "\n \n";
+    }
+    if(list[2].size() == 0){
+        text += "Toutes les arêtes appartiennent à au moins une face";
+    }
+    else{
+        for(int i = 0; i<list[2].size(); i++){
+            text += QString(list[2][i]);
+        };
+        text += "\n \n";
+    }
+
+    QMessageBox::information(this, tr("Voisins"), text);
+}
+
+void MainWindow::on_actionCommandes_triggered()
+{
+    QMessageBox::information(this,
+                             tr("Commandes"),
+                             QString("- Tourner le maillage : clic gauche sur le maillage \n"
+                                     "- Zoomer : molette de la souris OU clic gauche sur le maillage puis Ctrl OU clic gauche sur la maillage puis clic sur la molette \n"
+                                     "- Translation dans le plan du viewer : clic gauche sur le maillage puis Alt"));
 }
