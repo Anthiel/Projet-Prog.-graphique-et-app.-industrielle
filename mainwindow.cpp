@@ -331,6 +331,21 @@ void MainWindow::showVertexNormal(MyMesh* _mesh){
 }
 
 void MainWindow::deviationNormales(MyMesh* _mesh){
+
+    QVector<QVector<int>> colorsByDeviation = {
+        {0, 0, 0},
+        {100, 0, 0},
+        {180, 0, 0},
+        {255, 0, 0},
+        {0, 100, 0},
+        {0, 180, 0},
+        {0, 255, 0},
+        {0, 0, 100},
+        {0, 0, 180},
+        {0, 0, 255},
+        {100, 0, 100}
+    };
+
     for (MyMesh::VertexIter curVert = _mesh->vertices_begin(); curVert != _mesh->vertices_end(); curVert++)
     {
         VertexHandle currentVertex = *curVert;
@@ -350,7 +365,23 @@ void MainWindow::deviationNormales(MyMesh* _mesh){
             }
         }
         _mesh->data(currentVertex).thickness = 5;
-        _mesh->set_color(currentVertex, MyMesh::Color(trunc(255*maxDeviation), 0, 0));
+
+
+        QVector<int> color;
+
+        if(0 <= maxDeviation && maxDeviation < 0.1) color = colorsByDeviation[0];
+        if(0.1 <= maxDeviation && maxDeviation < 0.2) color = colorsByDeviation[1];
+        if(0.2 <= maxDeviation && maxDeviation < 0.3) color = colorsByDeviation[2];
+        if(0.3 <= maxDeviation && maxDeviation < 0.4) color = colorsByDeviation[3];
+        if(0.4 <= maxDeviation && maxDeviation < 0.5) color = colorsByDeviation[4];
+        if(0.5 <= maxDeviation && maxDeviation < 0.6) color = colorsByDeviation[5];
+        if(0.6 <= maxDeviation && maxDeviation < 0.7) color = colorsByDeviation[6];
+        if(0.7 <= maxDeviation && maxDeviation < 0.8) color = colorsByDeviation[7];
+        if(0.8 <= maxDeviation && maxDeviation < 0.9) color = colorsByDeviation[8];
+        if(0.9 <= maxDeviation && maxDeviation < 1.0) color = colorsByDeviation[9];
+        if(1.0 <= maxDeviation) color = colorsByDeviation[10];
+
+        _mesh->set_color(currentVertex, MyMesh::Color(color[0], color[1], color[2]));
     }
     displayMesh(_mesh);
 }
@@ -369,9 +400,15 @@ std::vector<int> MainWindow::anglesDihedres(MyMesh* _mesh){
                 MyMesh::Normal normal1 = _mesh->calc_face_normal(f1);
                 float scalar = abs(normal0 | normal1);
                 float angle = acos(scalar) * 180 / M_PI;
-                int index = abs(floor(angle / 10));
-                if (isnan(index) || index < 0 ) index = 0;
-                angleCount[index] += 1;
+                qDebug() << (int) angle;
+                for(int i = 0 ; i < angleCount.size(); ++i){
+                    float angleMin = (float) i * 10.0;
+                    float angleMax = (float) (i + 1) * 10.0;
+                    if(angleMin <= angle && angle < angleMax){
+                        angleCount[i] += 1;
+                        break;
+                    }
+                }
             }
             else{
                 continue;
