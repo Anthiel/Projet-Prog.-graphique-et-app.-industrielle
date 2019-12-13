@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="fr">
+	<head>
+		<title>RRaffin - Visualisation de Maillages - AMU/LIS 7020</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				color: #808080;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+
+				background-color: #fff;
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			#info {
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+			}
+
+			a {
+				color: #0080ff;
+			}
+
+		</style>
+	</head>
+	<body>
+
+		<div id="container"></div>
+		<div id="info">Afficheur de maillage 3D</div>
+
+		<script src="js/three.js"></script>
+		<script src="js/controls/TrackballControls.js"></script>
+		<script src="js/loaders/PLYLoader.js"></script>
+
+		<script src="js/loaders/ctm/lzma.js"></script>
+		<script src="js/loaders/ctm/ctm.js"></script>
+		<script src="js/loaders/ctm/CTMLoader.js"></script>
+
+		<script src="js/loaders/OBJLoader.js"></script>
+
+		<script>
+
+			//Vérification des possibilités WebGL
+			//if ( ! Detector.webgl ) Detector.addGetWebGLMessage();
+
+			var container;
+			var camera, scene, renderer;
+			var mesh;
+			//theShadowLight;
+			var mouseX = 0, mouseY = 0;
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+			var raycaster = new THREE.Raycaster();
+			var helper;
+			var mouse = new THREE.Vector2();
+			var line;
+			var facesList = [];
+			var pt0;
+			var pt1;
+			var face0;
+			var face1;
+
+			class Face {
+				constructor(neighbours, barycenter, index){
+					this.neighbours = neighbours;
+					this.barycenter = barycenter;
+					this.index = index;
+				}
+			}
+
+			class NeighbouringFace {
+  			constructor(index, weight, pt0, pt1) {
+					this.index = index;
+					this.weight = weight;
+					this.pt0 = pt0;
+					this.pt1 = pt1;
+  			}
+			}
+
+				//Lancement du rendu
+				init();
+				animate();
+
+			function init() {
+
+				container = document.getElementById( 'container' );
+
+				var canvas = document.createElement( 'canvas' );
+					canvas.width = 128;
+					canvas.height = 128;
+
+				var context = canvas.getContext( '2d' );
+				context.fillRect( 0, 0, canvas.width, canvas.height );
+
+				var lightBox = 10.0;
+
+
+				renderer = new THREE.WebGLRenderer( { antialias: true} );
+					renderer.setClearColor( 0xffffff );
+					renderer.setPixelRatio( window.devicePixelRatio );
+					renderer.setSize( window.innerWidth, window.innerHeight );
+
+									//Caméra
+				camera = new THREE.PerspectiveCamera( 35, window.innerWidth / window.innerHeight, 1, 10000 );
+					camera.position.z = lightBox;
+					cameraTarget = new THREE.Vector3( 0, 0, 0 );
+
+				//Contrôles
+				controls = new THREE.TrackballControls( camera );
+					controls.rotateSpeed = 5.0;
+					controls.zoomSpeed = 1;
+					controls.panSpeed =1;
+
+					controls.noZoom = false;
+					controls.noPan = false;
+
+					controls.staticMoving = true;
+					controls.dynamicDampingFactor = 0.3;
+
+				//Création de la scène
+				scene = new THREE.Scene();
+
+				//Mise en place d'une lumière ambiente
+				scene.add( new THREE.AmbientLight( 0xffffff ) );
+				var myLightPos = new THREE.Vector3( 0, 0, 0 );
+
+
+					//fichier source du maillage, SUZANNE.PLY, loader ply
+					var sourcePLY = 'data/suzanne.ply'
+					console.log("viewMesh Ply : "+sourcePLY);
+
+					var loaderPLY = new THREE.PLYLoader();
+
+					loaderPLY.load(sourcePLY, function ( geometryPLY ) {
+
+						geometryPLY.computeFaceNormals();
+						
+							geometryPLY.computeVertexNormals();
+							geometryPLY.computeBoundingBox();
+
+						var centrePLY = new THREE.Vector3();
+							centrePLY.x = ( geometryPLY.boundingBox.max.x + geometryPLY.boundingBox.min.x ) / 2.0;
+							centrePLY.y = ( geometryPLY.boundingBox.max.y + geometryPLY.boundingBox.min.y ) / 2.0;
+							centrePLY.z = ( geometryPLY.boundingBox.max.z + geometryPLY.boundingBox.min.z ) / 2.0;
+
+						geometryPLY.computeBoundingSphere();
+
+						var materialColor = new THREE.MeshLambertMaterial({color: "#C0DCAF" } );
+						var materialWire = new THREE.MeshLambertMaterial({color: "#000000", wireframe: true } );
+
+						meshColor = new THREE.Mesh( geometryPLY, materialColor)
+						meshColor.position.set( -centrePLY.x, -centrePLY.y, -centrePLY.z);
+						meshColor.castShadow = true;
+						meshColor.receiveShadow = true;
+
+						meshPLY = new THREE.Mesh( geometryPLY, materialWire );
+						meshPLY.position.set( -centrePLY.x, -centrePLY.y, -centrePLY.z);
+						meshPLY.castShadow = true;
+						meshPLY.receiveShadow = true;
+
+						myLightPos.x = 1.1*geometryPLY.boundingBox.max.x;
+						myLightPos.y = 1.1*geometryPLY.boundingBox.max.y;
+						myLightPos.z = 1.1*geometryPLY.boundingBox.max.z;
+
+						mesh = meshPLY
+						geometry = new THREE.Geometry().fromBufferGeometry(mesh.geometry);
+						scene.add( mesh );
+						scene.add(meshColor);
+						dual();
+					});
+
+					var geometry = new THREE.BufferGeometry();
+					geometry.addAttribute( 'position', new THREE.BufferAttribute( new Float32Array( 4 * 3 ), 3 ) );
+					var material = new THREE.LineBasicMaterial( { color: "#ff0000", transparent: true } );
+					line = new THREE.Line( geometry, material );
+					scene.add( line );
+
+					container.addEventListener( 'mousemove', onMouseMove, false );
+					document.addEventListener( 'keydown', djikstra, false );
+
+				//une lumière supplémentaire
+				var myLight = new THREE.SpotLight( 0xffffff );
+					myLight.castShadow = false;            // default false
+					myLight.position.set(myLightPos.x, myLightPos.y, myLightPos.z);
+				scene.add( myLight );
+
+				//gestion des ombres
+					renderer.shadowMap.enabled = true;
+					//renderer.shadowMap.cullFace = THREE.CullFaceFront;//deprecated in v89
+					//renderer.shadowMap.renderReverseSided = true; //v89 deprecated in v97
+					renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+
+					//un spotLight pour les ombres
+					var lightShadow = new THREE.SpotLight( 0xffffff );
+					lightShadow.castShadow = true;            // default false
+					scene.add( lightShadow );
+
+					//les paramètres du spotlight des ombres
+					lightShadow.shadow.mapSize.width = 512;  // default (cf doc ThreeJS.org)
+					lightShadow.shadow.mapSize.height = 512; // default
+					lightShadow.shadow.camera.near = 0.5;       // default
+					lightShadow.shadow.camera.far = 500      // default
+					lightShadow.position.set(camera.position.x, camera.position.y, camera.position.z);
+
+				container.appendChild( renderer.domElement );
+
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+
+			function onWindowResize() {
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+			}
+
+			function animate() {
+				requestAnimationFrame( animate );
+				controls.update();
+
+				render();
+			}
+
+			function render() {
+
+				renderer.render( scene, camera );
+			}
+
+			function dual(){
+				var geometry = geometry = new THREE.Geometry().fromBufferGeometry(mesh.geometry);
+				var faces = geometry.faces;
+				var vertices = geometry.vertices;
+				for ( var i = 0 ; i < faces.length ; ++i ) {
+					var face = faces[i];
+					var gCenterX = (vertices[face.a].x + vertices[face.b].x + vertices[face.c].x) / 3;
+					var gCenterY = (vertices[face.a].y + vertices[face.b].y + vertices[face.c].y) / 3;
+					var gCenterZ = (vertices[face.a].z + vertices[face.b].z + vertices[face.c].z) / 3;
+
+					var gCenter = {gCenterX, gCenterY, gCenterZ};
+					
+				var faceObj = new Face([], gCenter, i);
+					facesList.push(faceObj);
+				}
+
+				for ( var i = 0 ; i < faces.length ; ++i ) {
+					for ( var j = i + 1 ; j < faces.length ; ++j ) {
+						var face0 = faces[i];
+						var face1 = faces[j];
+						var commonPoints = [];
+						
+						if (face0.a == face1.a || face0.a == face1.b || face0.a == face1.c) commonPoints.push(vertices[face0.a]);
+						if (face0.b == face1.a || face0.b == face1.b || face0.b == face1.c) commonPoints.push(vertices[face0.b]);
+						if (face0.c == face1.a || face0.c == face1.b || face0.c == face1.c) commonPoints.push(vertices[face0.c]);
+
+						if(commonPoints.length != 2) continue;
+						var dist = Math.sqrt(Math.pow(facesList[j].barycenter.gCenterX - facesList[i].barycenter.gCenterX, 2) + 
+																	Math.pow(facesList[j].barycenter.gCenterY - facesList[i].barycenter.gCenterY, 2) + 
+																	Math.pow(facesList[j].barycenter.gCenterZ - facesList[i].barycenter.gCenterZ, 2));
+						
+						var neighi = new NeighbouringFace(j, dist, commonPoints[0], commonPoints[1]);
+						var neighj = new NeighbouringFace(i, dist, commonPoints[0], commonPoints[1]);
+
+						facesList[i].neighbours.push(neighi);
+						facesList[j].neighbours.push(neighj);
+					}
+				}
+			}
+
+			function drawLine (p0, p1){
+				var geometry = new THREE.BufferGeometry();
+				var material = new THREE.LineBasicMaterial( { vertexColors: THREE.VertexColors } );
+				var positions = [...p0, ...p1];
+				var colors = [...[255,0,0], ...[255,0,0]];
+				geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+				geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
+				lineUser = new THREE.Line( geometry, material );
+				scene.add( lineUser );
+				render();
+			}
+
+			function minIndex(arr, Q) {
+				if (arr.length === 0) {
+        	return -1;
+				}
+
+				var min = arr[0];
+				var minIndex = 0;
+
+				for (var i = 1; i < arr.length; i++) {
+						if (arr[i] < min && Q.indexOf(i) != -1) {
+								minIndex = i;
+								min = arr[i];
+						}
+				}
+
+				return minIndex;
+			}
+
+			function djikstra(event){
+				//mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
+				//mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
+				raycaster.setFromCamera(mouse, camera);
+				var intersects = raycaster.intersectObject(mesh);
+				if (intersects.length > 0) {
+					var F = intersects[0];
+					var P = intersects[0].point;
+
+					var dotGeometry = new THREE.BufferGeometry();
+					position = [P.x, P.y, P.z];
+					color = [255, 0, 0];
+					dotGeometry.addAttribute( 'position', new THREE.Float32BufferAttribute( position, 3 ) );
+					dotGeometry.addAttribute( 'color', new THREE.Float32BufferAttribute( color, 3 ) );
+					var dotMaterial = new THREE.PointsMaterial( { size: 0.04, vertexColors: THREE.VertexColors } );
+					point = new THREE.Points( dotGeometry, dotMaterial );
+					scene.add( point );
+					pt0 = pt1;
+					pt1 = position;
+					face0 = face1;
+					face1 = F;
+					if(pt0 != null && pt1 != null) {
+						if(face0.faceIndex == face1.faceIndex){
+							drawLine(pt0, pt1);
+						}
+						else{
+							var f0 = facesList[face0.faceIndex];
+							var f1 = facesList[face1.faceIndex];
+							var Q = [];
+							var dist = [];
+							var prev = [];
+
+							for (var i = 0 ; i < facesList.length ; ++i){
+								dist[i] = Infinity;
+								prev[i] = undefined;
+								Q.push(facesList[i].index);
+							}
+
+							dist[face0.faceIndex] = 0;
+							while(Q.length != 0){
+								var u = minIndex(dist, Q);
+								Q.splice(Q.indexOf(u), 1);
+								if(u == f1.index) break;
+								for(var j = 0 ; j < facesList[u].neighbours.length ; ++j ){
+									var v = facesList[u].neighbours[j];
+									if(Q.indexOf(v.index) != -1) {
+										alt = dist[u] + v.weight;
+										if (alt < dist[v.index]){
+											dist[v.index] = alt;
+											prev[v.index] = u;
+										}
+									}
+								}
+							}
+
+							var S = [];
+							var curFace = f1.index;
+							if(prev[curFace] != undefined || curFace == f0.index){
+								while(curFace != undefined){
+									S.push(curFace);
+									curFace = prev[curFace];
+								}
+							}
+							
+							
+							var currentPoint0 = pt0;
+							var currentPoint1 = pt0;
+							var currentFace0;
+							var currentFace1 = facesList[S.pop()];
+							while(S.length > 0 ) {
+								currentFace0 = currentFace1;
+								currentFace1 = facesList[S.pop()];
+								var neigh;
+
+								for(var i = 0; i < currentFace0.neighbours.length ; i++){
+									if(currentFace0.neighbours[i].index == currentFace1.index)
+										neigh = currentFace0.neighbours[i];
+								}
+
+								currentPoint0 = currentPoint1;
+								currentPoint1 = Object.values(currentFace1.barycenter);
+
+								var middle = [(neigh.pt0.x + neigh.pt1.x) / 2,
+																(neigh.pt0.y + neigh.pt1.y) / 2,
+																(neigh.pt0.z + neigh.pt1.z) / 2];
+
+								
+								if(S.length == 0) currentPoint1 = pt1;
+								drawLine(currentPoint0, middle);
+								drawLine(middle, currentPoint1);
+							}
+						}
+					}
+				}
+			}
+
+			function onMouseMove(event){
+				mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
+				mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
+				raycaster.setFromCamera( mouse, camera );
+				// See if the ray from the camera into the world hits one of our meshes
+				var intersects = raycaster.intersectObject( mesh );
+				if(intersects.length > 0){
+					var intersect = intersects[0];
+					var P = intersects[0].point;
+					//console.log("intersection: " + P.x + " " + P.y + " " + P.z);
+					var face = intersect.face;
+					var linePosition = line.geometry.attributes.position;
+					var meshPosition = mesh.geometry.attributes.position;
+
+					linePosition.copyAt( 0, meshPosition, face.a );
+					linePosition.copyAt( 1, meshPosition, face.b );
+					linePosition.copyAt( 2, meshPosition, face.c );
+					linePosition.copyAt( 3, meshPosition, face.a );
+
+					mesh.updateMatrix();
+					line.geometry.applyMatrix( mesh.matrix );
+					line.visible = true;
+					//console.log(intersect);
+				}
+				else {
+					line.visible = false;
+				}
+			}
+
+		</script>
+	</body>
+</html>
