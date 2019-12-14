@@ -7,7 +7,7 @@ Pour la partie web, veuillez placer le fichier "index.html" dans votre dossier "
 
 **Participants:**
 * Rémy Dechelle - remy.dechelle-rialland@etu.univ-amu.fr
-* Yoann Foulon - lucas.moragues@etu.univ-amu.fr
+* Yoann Foulon - yoann.foulon@etu.univ-amu.fr
 * Julien Roux - julien.roux1@etu.univ-amu.fr
 * Antoine Thiel - antoine.thiel@etu.univ-amu.fr
 
